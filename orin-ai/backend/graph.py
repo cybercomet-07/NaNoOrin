@@ -14,6 +14,7 @@ from agents.auditor import auditor_node, route_after_audit
 from agents.critic import critic_node, route_after_critic
 from agents.developer import developer_node
 from agents.persona import persona_node
+from agents.readme_generator import readme_node
 from agents.researcher import researcher_node
 from agents.safe_nodes import safe_node_wrapper
 from agents.supervisor import supervisor_node
@@ -22,6 +23,7 @@ from state import AgentState, get_initial_state
 _researcher_safe = safe_node_wrapper(researcher_node)
 _persona_safe = safe_node_wrapper(persona_node)
 _architect_safe = safe_node_wrapper(architect_node)
+_readme_safe = safe_node_wrapper(readme_node)
 
 
 def supervisor_with_fanout(state: AgentState):
@@ -98,6 +100,7 @@ builder.add_node("architect", _architect_safe)
 builder.add_node("developer", developer_node)
 builder.add_node("critic", critic_node)
 builder.add_node("auditor", auditor_node)
+builder.add_node("readme_generator", _readme_safe)
 builder.add_node("end_success", end_success_node)
 builder.add_node("end_failed", end_failed_node)
 
@@ -122,10 +125,12 @@ builder.add_conditional_edges(
     "auditor",
     route_after_audit,
     {
-        "end_success": "end_success",
+        "readme_generator": "readme_generator",
         "developer": "developer",
     },
 )
+
+builder.add_edge("readme_generator", "end_success")
 
 builder.add_edge("end_success", END)
 builder.add_edge("end_failed", END)

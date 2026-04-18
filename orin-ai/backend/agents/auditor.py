@@ -107,7 +107,6 @@ def auditor_node(state: AgentState) -> AgentState:
         if not violations:
             state["audit_report"] = {"regex_violations": [], "llm_review": None}
             state["audit_passed"] = True
-            state["status"] = "FINALIZED"
             return state
 
         review, user_message = llm_security_review(
@@ -125,9 +124,7 @@ def auditor_node(state: AgentState) -> AgentState:
             {"role": "assistant", "content": audit_result[:2000]},
         ])[-12:]
 
-        if clean:
-            state["status"] = "FINALIZED"
-        else:
+        if not clean:
             state["error_log"].append("auditor: security review failed; remediation required")
             state["messages"].append({
                 "role": "system",
@@ -141,5 +138,5 @@ def auditor_node(state: AgentState) -> AgentState:
 
 def route_after_audit(state: AgentState) -> str:
     if state.get("audit_passed"):
-        return "end_success"
+        return "readme_generator"
     return "developer"

@@ -634,6 +634,8 @@ Add readme_node to graph.py:
 - Update auditor's clean path: "auditor" → "readme_generator" → "end_success"
 ```
 
+**Implemented:** `backend/agents/readme_generator.py` uses `call_agent_llm("architect", ...)` (Gemini Flash, `GOOGLE_API_KEY_2`). `readme_node` writes `README.md` into `code_files`; wrapped with `safe_node_wrapper`. `auditor_node` no longer sets `FINALIZED` on pass — `route_after_audit` routes to `readme_generator` then `end_success`. SSE maps `readme_generator` → agent label `Readme`. Env keys documented in README prompt text as in `.env.example`.
+
 ---
 
 ## GAP 6 — FULL FRONTEND PROMPTS
@@ -1363,7 +1365,7 @@ DAY 1 AFTERNOON:
 [ ] PROMPT 3.3  — Persona agent
 [ ] PROMPT 3.4  — Architect agent
 [ ] PROMPT 3.7  — Auditor agent
-[ ] PROMPT G5.1 — README generator agent
+[x] PROMPT G5.1 — README generator agent
 [ ] PROMPT 6.1  — Logfire hardening
 [ ] PROMPT 8.2  — Startup validation
 

@@ -381,6 +381,7 @@ _AGENT_LABEL: dict[str, str] = {
     "developer": "Developer",
     "critic": "Critic",
     "auditor": "Auditor",
+    "readme_generator": "Readme",
     "end_success": "system",
     "end_failed": "system",
 }
@@ -425,6 +426,15 @@ def _node_output_to_event(node_name: str, node_output: dict) -> dict:
         payload = {
             "audit_passed": node_output.get("audit_passed", False),
             "audit_report": node_output.get("audit_report") or {},
+        }
+
+    elif node_name == "readme_generator":
+        event_type = "agent_complete"
+        cf = node_output.get("code_files") or {}
+        readme = cf.get("README.md", "")
+        payload = {
+            "readme_generated": "README.md" in cf,
+            "readme_preview": readme[:400] if readme else "",
         }
 
     elif node_name in ("end_success", "end_failed"):
