@@ -12,8 +12,13 @@ from agents.critic import critic_node, route_after_critic
 from agents.developer import developer_node
 from agents.persona import persona_node
 from agents.researcher import researcher_node
+from agents.safe_nodes import safe_node_wrapper
 from agents.supervisor import supervisor_node
 from state import AgentState, get_initial_state
+
+_researcher_safe = safe_node_wrapper(researcher_node)
+_persona_safe = safe_node_wrapper(persona_node)
+_architect_safe = safe_node_wrapper(architect_node)
 
 
 def supervisor_with_fanout(state: AgentState):
@@ -43,10 +48,10 @@ def end_failed_node(state: AgentState) -> AgentState:
 builder = StateGraph(AgentState)
 
 builder.add_node("supervisor", supervisor_with_fanout)
-builder.add_node("researcher", researcher_node)
-builder.add_node("persona", persona_node)
+builder.add_node("researcher", _researcher_safe)
+builder.add_node("persona", _persona_safe)
 builder.add_node("join", join_node)
-builder.add_node("architect", architect_node)
+builder.add_node("architect", _architect_safe)
 builder.add_node("developer", developer_node)
 builder.add_node("critic", critic_node)
 builder.add_node("auditor", auditor_node)

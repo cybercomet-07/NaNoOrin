@@ -1,6 +1,6 @@
 """
 Orin AI — Production FastAPI Server
-Phase 5: PROMPT 5.1
+Phase 5: PROMPT 5.1 · Phase 8: hardening
 
 Endpoints:
   POST  /run               → start a pipeline run
@@ -15,15 +15,27 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import logfire
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
+
+# ---------------------------------------------------------------------------
+# Phase 8.2 — fail fast on missing keys / broken E2B (set ORIN_SKIP_STARTUP_VALIDATION=1 to skip)
+# ---------------------------------------------------------------------------
+if os.getenv("ORIN_SKIP_STARTUP_VALIDATION") != "1":
+    from startup_check import validate_environment
+
+    validate_environment()
 
 # ---------------------------------------------------------------------------
 # Phase 1 — state (COMPLETE)
@@ -42,11 +54,41 @@ from tools.tavily_tools import validate_tavily_connection
 from graph import graph
 
 # ---------------------------------------------------------------------------
-# App + middleware
+# Logfire + in-memory run stores (must exist before lifespan / cleanup)
 # ---------------------------------------------------------------------------
 logfire.configure()
 
-app = FastAPI(title="Orin AI", version="1.0.0")
+run_queues: dict[str, asyncio.Queue] = {}
+run_states: dict[str, str] = {}
+run_artifacts: dict[str, dict] = {}
+run_timestamps: dict[str, float] = {}
+
+
+async def cleanup_old_runs() -> None:
+    """Remove runs older than 2 hours from memory (Phase 8.1)."""
+    while True:
+        await asyncio.sleep(3600)
+        cutoff = time.time() - 7200
+        expired = [rid for rid, t in run_timestamps.items() if t < cutoff]
+        for rid in expired:
+            run_queues.pop(rid, None)
+            run_states.pop(rid, None)
+            run_artifacts.pop(rid, None)
+            run_timestamps.pop(rid, None)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    cleanup_task = asyncio.create_task(cleanup_old_runs())
+    yield
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
+
+
+app = FastAPI(title="Orin AI", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,15 +98,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logfire.instrument_fastapi(app)
 
-# ---------------------------------------------------------------------------
-# In-memory run stores
-# ---------------------------------------------------------------------------
-run_queues: dict[str, asyncio.Queue] = {}
-run_states: dict[str, str] = {}
-run_artifacts: dict[str, dict] = {}
-run_timestamps: dict[str, float] = {}
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = str(uuid.uuid4())[:8]
+    with logfire.span("http_request", request_id=request_id, path=request.url.path):
+        response = await call_next(request)
+    return response
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            {"detail": exc.detail},
+            status_code=exc.status_code,
+        )
+    if isinstance(exc, RequestValidationError):
+        return JSONResponse({"detail": exc.errors()}, status_code=422)
+    logfire.error("unhandled_exception", error=str(exc), path=request.url.path)
+    return JSONResponse(
+        {"error": "Internal error", "detail": str(exc)},
+        status_code=500,
+    )
+
+
+logfire.instrument_fastapi(app)
 
 # ---------------------------------------------------------------------------
 # Request model
