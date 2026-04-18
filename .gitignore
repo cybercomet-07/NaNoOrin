@@ -4,3 +4,8 @@ __pycache__/
 .venv/
 venv/
 orin-ai/backend/.env
+
+# Frontend (Next.js)
+orin-ai/frontend/node_modules/
+orin-ai/frontend/.next/
+orin-ai/frontend/out/

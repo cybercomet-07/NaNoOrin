@@ -1,66 +1,111 @@
-// TODO: Phase 9 (Day 2) — usePipelineStream hook
-// Opens SSE connection to GET /stream/{run_id}
-// Parses incoming events and accumulates state
+"use client"
+import { useState, useEffect, useCallback } from "react"
 
-import { useState, useEffect } from "react";
-
-interface PipelineEvent {
-  event_type: string;
-  agent: string;
-  task_id: string;
-  iteration: number;
-  payload: Record<string, unknown>;
-  timestamp: string;
-  status?: string;
+export interface AgentEvent {
+  event_type: "agent_start" | "agent_complete" | "test_result" | "status_update"
+  agent: string
+  task_id: string
+  iteration: number
+  payload: Record<string, unknown>
+  timestamp: string
 }
 
-interface PipelineStreamState {
-  events: PipelineEvent[];
-  status: string;
-  isConnected: boolean;
-  latestTest: { stdout: string; stderr: string; exit_code: number } | null;
+export interface AgentStatus {
+  name: string
+  status: "PENDING" | "RUNNING" | "PASSED" | "FAILED"
+  iteration: number
+  lastOutput?: string
 }
 
-export function usePipelineStream(runId: string): PipelineStreamState {
-  const [events, setEvents] = useState<PipelineEvent[]>([]);
-  const [status, setStatus] = useState("RUNNING");
-  const [isConnected, setIsConnected] = useState(false);
-  const [latestTest, setLatestTest] = useState<PipelineStreamState["latestTest"]>(null);
+export function usePipelineStream(runId: string | null) {
+  const [events, setEvents] = useState<AgentEvent[]>([])
+  const [status, setStatus] = useState<string>("IDLE")
+  const [agentStatuses, setAgentStatuses] = useState<Record<string, AgentStatus>>({})
+  const [testResults, setTestResults] = useState<AgentEvent[]>([])
+  const [codeFiles, setCodeFiles] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!runId) return;
+    if (!runId) return
 
-    // TODO: open EventSource to /stream/{runId}
-    // TODO: on each message, parse JSON and append to events
-    // TODO: if event.status in ["FINALIZED", "FAILED"] → close connection
-    // TODO: handle reconnect on connection drop
-
-    const es = new EventSource(`http://localhost:8000/stream/${runId}`);
-    setIsConnected(true);
+    const es = new EventSource(`/api/stream/${runId}`)
 
     es.onmessage = (e) => {
-      const event: PipelineEvent = JSON.parse(e.data);
-      setEvents((prev) => [...prev, event]);
-      if (event.status) setStatus(event.status);
-      if (event.event_type === "test_result") {
-        setLatestTest(event.payload as PipelineStreamState["latestTest"]);
+      try {
+        if (!e.data || e.data.trim() === "") return
+        const data: AgentEvent = JSON.parse(e.data)
+        
+        setEvents(prev => [...prev, data])
+        
+        // Update agent status cards
+        if (data.event_type === "agent_start") {
+          setAgentStatuses(prev => ({
+            ...prev,
+            [data.agent]: { name: data.agent, status: "RUNNING", iteration: data.iteration }
+          }))
+        }
+        
+        if (data.event_type === "agent_complete") {
+          setAgentStatuses(prev => ({
+            ...prev,
+            [data.agent]: {
+              ...prev[data.agent],
+              status: "PASSED",
+              lastOutput: String(data.payload?.output_summary || "")
+            }
+          }))
+        }
+        
+        if (data.event_type === "test_result") {
+          setTestResults(prev => [...prev, data])
+          const passed = data.payload?.passed as boolean
+          setAgentStatuses(prev => ({
+            ...prev,
+            Developer: {
+              ...prev.Developer,
+              status: passed ? "PASSED" : "FAILED",
+              iteration: data.iteration
+            }
+          }))
+        }
+        
+        if (data.event_type === "status_update") {
+          const newStatus = data.payload?.status as string
+          setStatus(newStatus)
+          
+          // Fetch artifacts when finalized
+          if (newStatus === "FINALIZED") {
+            fetch(`/api/artifacts/${runId}`)
+              .then(r => r.json())
+              .then(d => setCodeFiles(d.files || {}))
+              .catch(console.error)
+          }
+          
+          if (["FINALIZED", "FAILED"].includes(newStatus)) {
+            es.close()
+          }
+        }
+      } catch (err) {
+        console.error("SSE parse error:", err)
       }
-      if (event.status === "FINALIZED" || event.status === "FAILED") {
-        es.close();
-        setIsConnected(false);
-      }
-    };
+    }
 
     es.onerror = () => {
-      setIsConnected(false);
-      es.close();
-    };
+      setError("Connection lost. Retrying...")
+      // EventSource auto-retries — don't manually close
+    }
 
-    return () => {
-      es.close();
-      setIsConnected(false);
-    };
-  }, [runId]);
+    return () => es.close()
+  }, [runId])
 
-  return { events, status, isConnected, latestTest };
+  const reset = useCallback(() => {
+    setEvents([])
+    setStatus("IDLE")
+    setAgentStatuses({})
+    setTestResults([])
+    setCodeFiles({})
+    setError(null)
+  }, [])
+
+  return { events, status, agentStatuses, testResults, codeFiles, error, reset }
 }

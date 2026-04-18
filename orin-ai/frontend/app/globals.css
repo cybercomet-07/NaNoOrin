@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-inter);
+}
+
+:root {
+  --background: #050505;
+  --surface: #111111;
+  --card: #161616;
+  --primary: #C7FF3D;
+  --secondary: #00D4FF;
+  --foreground: #FFFFFF;
+  --muted: #A1A1AA;
+
+  /* Terminal tokens (PDF Section 08 / GAP 6.1) */
+  --terminal-bg: #0a0a0a;
+  --terminal-border: #1f1f1f;
+  --terminal-green: #22c55e;
+  --terminal-yellow: #eab308;
+  --terminal-red: #ef4444;
+  --terminal-blue: #3b82f6;
+  --terminal-gray: #6b7280;
+  --terminal-text: #d4d4d4;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+  color-scheme: dark;
+}
