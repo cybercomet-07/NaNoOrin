@@ -16,12 +16,12 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import logfire
+import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,38 +54,57 @@ from tools.tavily_tools import validate_tavily_connection
 from graph import graph
 
 # ---------------------------------------------------------------------------
-# Logfire + in-memory run stores (must exist before lifespan / cleanup)
+# Logfire + run stores
 # ---------------------------------------------------------------------------
 logfire.configure()
 
+# Queues stay in-memory: asyncio.Queue cannot be serialised to Redis
 run_queues: dict[str, asyncio.Queue] = {}
-run_states: dict[str, str] = {}
-run_artifacts: dict[str, dict] = {}
-run_timestamps: dict[str, float] = {}
+
+# Redis client — set during lifespan startup
+_redis: aioredis.Redis | None = None
+
+_RUN_TTL = 7200  # 2 hours
 
 
-async def cleanup_old_runs() -> None:
-    """Remove runs older than 2 hours from memory (Phase 8.1)."""
-    while True:
-        await asyncio.sleep(3600)
-        cutoff = time.time() - 7200
-        expired = [rid for rid, t in run_timestamps.items() if t < cutoff]
-        for rid in expired:
-            run_queues.pop(rid, None)
-            run_states.pop(rid, None)
-            run_artifacts.pop(rid, None)
-            run_timestamps.pop(rid, None)
+async def _set_status(run_id: str, status: str) -> None:
+    if _redis:
+        await _redis.setex(f"status:{run_id}", _RUN_TTL, status)
+
+
+async def _get_status(run_id: str) -> str:
+    if _redis:
+        val = await _redis.get(f"status:{run_id}")
+        return val or "UNKNOWN"
+    return "UNKNOWN"
+
+
+async def _set_artifacts(run_id: str, artifacts: dict) -> None:
+    if _redis:
+        await _redis.setex(f"artifacts:{run_id}", _RUN_TTL, json.dumps(artifacts))
+
+
+async def _get_artifacts(run_id: str) -> dict:
+    if _redis:
+        data = await _redis.get(f"artifacts:{run_id}")
+        return json.loads(data) if data else {}
+    return {}
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    cleanup_task = asyncio.create_task(cleanup_old_runs())
-    yield
-    cleanup_task.cancel()
+    global _redis
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     try:
-        await cleanup_task
-    except asyncio.CancelledError:
-        pass
+        _redis = aioredis.from_url(redis_url, decode_responses=True)
+        await _redis.ping()
+        print(f"✅ Redis connected: {redis_url}")
+    except Exception as exc:
+        print(f"⚠️  Redis unavailable ({exc}). Run state will not persist across restarts.")
+        _redis = None
+    yield
+    if _redis:
+        await _redis.aclose()
 
 
 app = FastAPI(title="Orin AI", version="1.0.0", lifespan=lifespan)
@@ -127,10 +146,7 @@ logfire.instrument_fastapi(app)
 
 from llm_clients import validate_all_keys
 
-
-@app.on_event("startup")
-async def startup_event():
-    validate_all_keys()
+validate_all_keys()
 
 
 # ---------------------------------------------------------------------------
@@ -176,9 +192,7 @@ async def run(body: RunRequest):
     queue: asyncio.Queue = asyncio.Queue()
 
     run_queues[run_id] = queue
-    run_states[run_id] = "RUNNING"
-    run_artifacts[run_id] = {}
-    run_timestamps[run_id] = time.time()
+    await _set_status(run_id, "RUNNING")
 
     asyncio.create_task(execute_pipeline(run_id, body.prompt, queue))
 
@@ -223,9 +237,10 @@ async def stream(run_id: str):
 @app.get("/status/{run_id}")
 async def status(run_id: str):
     """Returns current status. Use when SSE connection drops."""
-    if run_id not in run_states:
+    current = await _get_status(run_id)
+    if current == "UNKNOWN" and run_id not in run_queues:
         raise HTTPException(status_code=404, detail=f"run_id {run_id!r} not found")
-    return {"run_id": run_id, "status": run_states[run_id]}
+    return {"run_id": run_id, "status": current}
 
 
 # ---------------------------------------------------------------------------
@@ -234,9 +249,11 @@ async def status(run_id: str):
 @app.get("/artifacts/{run_id}")
 async def artifacts(run_id: str):
     """Returns generated code files. Available after FINALIZED status."""
-    if run_id not in run_artifacts:
+    files = await _get_artifacts(run_id)
+    current_status = await _get_status(run_id)
+    if current_status == "UNKNOWN" and run_id not in run_queues:
         raise HTTPException(status_code=404, detail=f"run_id {run_id!r} not found")
-    return {"run_id": run_id, "files": run_artifacts[run_id]}
+    return {"run_id": run_id, "files": files}
 
 
 # ---------------------------------------------------------------------------
@@ -245,7 +262,8 @@ async def artifacts(run_id: str):
 @app.get("/trace/{run_id}")
 async def trace(run_id: str):
     """Returns Logfire dashboard URL. Open this during demo."""
-    if run_id not in run_states:
+    current = await _get_status(run_id)
+    if current == "UNKNOWN" and run_id not in run_queues:
         raise HTTPException(status_code=404, detail=f"run_id {run_id!r} not found")
     return {
         "run_id": run_id,
@@ -259,7 +277,7 @@ async def trace(run_id: str):
 @app.get("/health")
 async def health():
     """
-    Orin plan: {"status": "ok", "e2b": bool, "tavily": bool}.
+    Orin plan: {"status": "ok", "e2b": bool, "tavily": bool, "redis": bool}.
     Sandbox + Tavily clients are synchronous — run in a thread pool.
     """
     loop = asyncio.get_event_loop()
@@ -271,11 +289,16 @@ async def health():
         tavily_ok: bool = await loop.run_in_executor(None, validate_tavily_connection)
     except Exception:
         tavily_ok = False
+    try:
+        redis_ok: bool = _redis is not None and bool(await _redis.ping())
+    except Exception:
+        redis_ok = False
 
     return {
         "status": "ok",
         "e2b": e2b_ok,
         "tavily": tavily_ok,
+        "redis": redis_ok,
     }
 
 
@@ -310,9 +333,9 @@ async def execute_pipeline(run_id: str, prompt: str, queue: asyncio.Queue) -> No
 
                 last_node_output = node_output
 
-                # Mirror code_files into run_artifacts whenever Developer produces them
+                # Mirror code_files into Redis whenever Developer produces them
                 if node_output.get("code_files"):
-                    run_artifacts[run_id] = dict(node_output["code_files"])
+                    await _set_artifacts(run_id, dict(node_output["code_files"]))
 
                 event = _node_output_to_event(node_name, node_output)
                 await queue.put(event)
@@ -322,7 +345,7 @@ async def execute_pipeline(run_id: str, prompt: str, queue: asyncio.Queue) -> No
         if final_status not in ("FINALIZED", "FAILED", "PANIC"):
             final_status = "FINALIZED"
 
-        run_states[run_id] = final_status
+        await _set_status(run_id, final_status)
         await queue.put(make_event(
             event_type="status_update",
             agent="system",
@@ -332,7 +355,7 @@ async def execute_pipeline(run_id: str, prompt: str, queue: asyncio.Queue) -> No
 
     except Exception as exc:
         logfire.error("pipeline_failed", run_id=run_id, error=str(exc))
-        run_states[run_id] = "FAILED"
+        await _set_status(run_id, "FAILED")
         await queue.put(make_event(
             event_type="status_update",
             agent="system",

@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 langgraph
 openai
 google-generativeai
@@ -12,3 +12,4 @@ pydantic
 python-dotenv
 pytest
 pytest-asyncio
+redis[asyncio]
