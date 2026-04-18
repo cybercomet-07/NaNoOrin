@@ -22,6 +22,13 @@ export default function WorkspacePage() {
     setLoading(true);
     setError("");
 
+    // SIMULATED BACKEND (Frontend-only mode)
+    setTimeout(() => {
+      const demoId = `demo-${Math.random().toString(36).slice(2, 9)}`;
+      router.push(`/run/${demoId}`);
+    }, 1500);
+
+/*
     try {
       const res = await fetch("/api/run", {
         method: "POST",
@@ -51,6 +58,7 @@ export default function WorkspacePage() {
       setError(err instanceof Error ? err.message : "Unknown error");
       setLoading(false);
     }
+*/
   };
 
   const setExample = (text: string) => {
