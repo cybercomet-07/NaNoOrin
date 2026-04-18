@@ -16,8 +16,6 @@ const EXAMPLE_PROMPTS = [
   "Build a real-time chat API with WebSockets, user rooms, and message history",
 ];
 
-import ScrollFloat from "@/components/ScrollFloat";
-
 export default function LandingPage() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,37 +36,6 @@ export default function LandingPage() {
       const demoId = `demo-${Math.random().toString(36).slice(2, 9)}`;
       router.push(`/run/${demoId}`);
     }, 1500);
-/* 
-    try {
-      const res = await fetch("/api/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
-      });
-
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const err = await res.json();
-          throw new Error(err.detail || "Failed to start pipeline");
-        } else {
-          const text = await res.text();
-          throw new Error(`Server Error (${res.status}): ${text.slice(0, 50)}...`);
-        }
-      }
-
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const { run_id } = await res.json();
-        router.push(`/run/${run_id}`);
-      } else {
-        throw new Error("Invalid response from server (Expected JSON)");
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      setLoading(false);
-    }
-*/
   };
 
   return (
@@ -96,39 +63,14 @@ export default function LandingPage() {
                 OrinAI v2.0 is live
               </div>
               
-              <div className="flex flex-col gap-2">
-                <ScrollFloat
-                  animationDuration={1.2}
-                  stagger={0.03}
-                  containerClassName="text-5xl md:text-7xl font-extrabold tracking-tight text-white m-0"
-                  textClassName="text-white"
-                  scrollStart="top 95%"
-                  scrollEnd="top 20%"
-                >
-                  One Prompt.
-                </ScrollFloat>
-                <ScrollFloat
-                  animationDuration={1.2}
-                  stagger={0.02}
-                  containerClassName="text-5xl md:text-7xl font-extrabold tracking-tight m-0"
-                  textClassName="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary"
-                  scrollStart="top 90%"
-                  scrollEnd="top 25%"
-                >
+              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight">
+                One Prompt. <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
                   No Human in the Loop.
-                </ScrollFloat>
-                <ScrollFloat
-                  animationDuration={1.2}
-                  stagger={0.03}
-                  containerClassName="text-5xl md:text-7xl font-extrabold tracking-tight text-white m-0"
-                  textClassName="text-white"
-                  scrollStart="top 85%"
-                  scrollEnd="top 30%"
-                >
-                  Working Code.
-                </ScrollFloat>
-              </div>
-              
+                </span> <br />
+                Working Code.
+              </h1>
+
               <p className="text-lg md:text-xl text-muted max-w-xl">
                 OrinAI deploys intelligent AI agents that research, architect, code, test, and audit your entire project — autonomously.
               </p>
@@ -228,29 +170,13 @@ export default function LandingPage() {
         {/* FEATURES SECTION */}
         <section id="product" className="container mx-auto px-4 md:px-6 py-24 bg-surface/30 border-y border-white/5">
           <div className="text-center mb-16">
-            <ScrollFloat
-              animationDuration={0.8}
-              stagger={0.03}
-              containerClassName="text-3xl md:text-5xl font-bold text-white mb-4 flex justify-center"
-              textClassName="text-white"
-              scrollStart="top 90%"
-              scrollEnd="top 20%"
-            >
-              Complete Intelligence
-            </ScrollFloat>
-            <p className="text-muted max-w-2xl mx-auto text-lg text-center">
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Complete Intelligence</h2>
+            <p className="text-muted max-w-2xl mx-auto text-lg">
               End-to-end automation from raw idea to deployed infrastructure.
             </p>
           </div>
           
-          <ScrollFloat 
-            mode="elements" 
-            stagger={0.15}
-            animationDuration={1}
-            containerClassName="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-            scrollStart="top 85%"
-            scrollEnd="top 30%"
-          >
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { title: "Market Research", icon: LineChart, desc: "Instant viable analysis of competitors, TAM, and target demographics." },
               { title: "AI Personas", icon: Bot, desc: "Synthesized synthetic users to battle-test your product before launch." },
@@ -259,7 +185,7 @@ export default function LandingPage() {
               { title: "Security Audit", icon: ShieldCheck, desc: "Sentinel agents review code for vulnerabilities and performance bottlenecks." },
               { title: "Website Generator", icon: Zap, desc: "Instantly deploy a beautiful landing page with our dynamic templates." },
             ].map((feature, i) => (
-              <Card key={i} className="bg-surface/50 hover:bg-surface border-white/5 hover:border-primary/30 transition-all group overflow-hidden h-full">
+              <Card key={i} className="bg-surface/50 hover:bg-surface border-white/5 hover:border-primary/30 transition-all group">
                 <CardHeader>
                   <feature.icon className="h-10 w-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
                   <CardTitle>{feature.title}</CardTitle>
@@ -269,36 +195,18 @@ export default function LandingPage() {
                 </CardContent>
               </Card>
             ))}
-          </ScrollFloat>
+          </div>
         </section>
 
         {/* AI AGENTS SHOWCASE */}
         <section className="container mx-auto px-4 md:px-6 py-24">
           <div className="flex flex-col md:flex-row gap-12 items-center">
             <div className="flex-1">
-              <ScrollFloat
-                animationDuration={0.8}
-                stagger={0.04}
-                containerClassName="text-3xl md:text-5xl font-bold text-white mb-6"
-                textClassName="text-white"
-                scrollStart="top 85%"
-                scrollEnd="top 20%"
-              >
-                Meet OrinAI
-              </ScrollFloat>
+              <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Meet OrinAI</h2>
               <p className="text-muted text-lg mb-8">
                 Six specialized AI agents working synchronously to transform your text prompt into a living business.
               </p>
-              
-              <ScrollFloat
-                mode="elements"
-                stagger={0.1}
-                animationDuration={0.8}
-                containerClassName="space-y-4"
-                scrollStart="top 90%"
-                scrollEnd="top 40%"
-                as="ul"
-              >
+              <ul className="space-y-4">
                 {[
                   { name: "SCOUT", role: "Market Analyst" },
                   { name: "PERSONA", role: "UX / Simulator" },
@@ -312,16 +220,10 @@ export default function LandingPage() {
                     <span className="text-white/60 text-sm">— {agent.role}</span>
                   </li>
                 ))}
-              </ScrollFloat>
+              </ul>
             </div>
-            {/* Visual representation of agents connected */}
-            <ScrollFloat 
-              mode="elements"
-              animationDuration={1.5}
-              scrollStart="top 80%"
-              scrollEnd="top 20%"
-              containerClassName="flex-1 relative aspect-square max-w-md mx-auto"
-            >
+            <div className="flex-1 relative aspect-square max-w-md mx-auto">
+              {/* Visual representation of agents connected */}
               <div className="absolute inset-0 rounded-full border border-white/10 animate-[spin_60s_linear_infinite]" />
               <div className="absolute inset-4 rounded-full border border-primary/20 animate-[spin_40s_linear_infinite_reverse]" />
               <div className="absolute inset-8 rounded-full border border-secondary/20 animate-[spin_20s_linear_infinite]" />
@@ -330,36 +232,20 @@ export default function LandingPage() {
                   <Logo />
                 </div>
               </div>
-            </ScrollFloat>
+            </div>
           </div>
         </section>
 
         {/* PRICING */}
         <section id="pricing" className="container mx-auto px-4 md:px-6 py-24 bg-surface/30 border-t border-white/5">
           <div className="text-center mb-16">
-            <ScrollFloat
-              animationDuration={0.8}
-              stagger={0.03}
-              containerClassName="text-3xl md:text-5xl font-bold text-white mb-4 flex justify-center"
-              textClassName="text-white"
-              scrollStart="top 90%"
-              scrollEnd="top 25%"
-            >
-              Pricing
-            </ScrollFloat>
-            <p className="text-muted text-center">Simple scalable plans for absolute power.</p>
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Pricing</h2>
+            <p className="text-muted">Simple scalable plans for absolute power.</p>
           </div>
           
-          <ScrollFloat 
-            mode="elements"
-            stagger={0.2}
-            animationDuration={1}
-            containerClassName="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto"
-            scrollStart="top 85%"
-            scrollEnd="top 30%"
-          >
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {/* Free */}
-            <Card className="bg-surface border-white/10 overflow-hidden">
+            <Card className="bg-surface border-white/10">
               <CardHeader>
                 <CardTitle className="text-xl">Free</CardTitle>
                 <div className="text-4xl font-bold text-white mt-4">$0</div>
@@ -375,8 +261,8 @@ export default function LandingPage() {
             </Card>
 
             {/* Pro */}
-            <Card className="bg-card border-primary relative shadow-[0_0_40px_rgba(199,255,61,0.1)] transform md:-translate-y-4 overflow-hidden">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-black text-xs font-bold px-3 py-1 rounded-full uppercase z-20">
+            <Card className="bg-card border-primary relative shadow-[0_0_40px_rgba(199,255,61,0.1)] transform md:-translate-y-4">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-black text-xs font-bold px-3 py-1 rounded-full uppercase">
                 Most Popular
               </div>
               <CardHeader>
@@ -395,7 +281,7 @@ export default function LandingPage() {
             </Card>
 
             {/* Enterprise */}
-            <Card className="bg-surface border-white/10 overflow-hidden">
+            <Card className="bg-surface border-white/10">
               <CardHeader>
                 <CardTitle className="text-xl">Enterprise</CardTitle>
                 <div className="text-4xl font-bold text-white mt-4">$299<span className="text-lg text-muted font-normal">/mo</span></div>
@@ -409,38 +295,6 @@ export default function LandingPage() {
                 <Button variant="outline" className="w-full mt-6">Contact Sales</Button>
               </CardContent>
             </Card>
-          </ScrollFloat>
-        </section>
-
-        {/* FINAL CTA / 1-STOP SOLUTION */}
-        <section className="container mx-auto px-4 md:px-6 py-24 border-t border-white/5">
-          <div className="bg-gradient-to-tr from-surface to-background border border-primary/20 rounded-3xl p-12 text-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
-            
-            <ScrollFloat 
-              mode="elements"
-              animationDuration={1.2}
-              containerClassName="relative z-10"
-              scrollStart="top 95%"
-              scrollEnd="top 30%"
-            >
-              <ScrollFloat
-                animationDuration={0.8}
-                stagger={0.03}
-                containerClassName="text-3xl md:text-5xl font-bold text-white mb-6 flex justify-center"
-                textClassName="text-white"
-                scrollStart="top 120%"
-                scrollEnd="top 20%"
-              >
-                OrinAI: 1-Stop Solution
-              </ScrollFloat>
-              <p className="text-xl text-muted max-w-2xl mx-auto mb-10">
-                The absolute standard for autonomous AI enterprise generation.
-              </p>
-              <Button size="lg" className="h-14 px-10 text-lg font-bold">
-                Start Building Now
-              </Button>
-            </ScrollFloat>
           </div>
         </section>
 
