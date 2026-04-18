@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 from llm_json import parse_json_object
 from state import AgentState
+from utils.logfire_helpers import log_anthropic_usage
 
 load_dotenv()
 
@@ -92,6 +93,7 @@ def llm_security_review(code_files: dict[str, str], regex_violations: list) -> d
         system=system,
         messages=[{"role": "user", "content": user}],
     )
+    log_anthropic_usage("auditor", _HAIKU_MODEL, msg)
     text = ""
     for block in msg.content:
         if hasattr(block, "text"):
@@ -131,6 +133,7 @@ def auditor_node(state: AgentState) -> AgentState:
                     )[:12000],
                 }
             )
+        logfire.info("auditor_result", audit_passed=state["audit_passed"])
     return state
 
 

@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 from llm_json import parse_json_array
 from state import AgentState, Task, build_agent_context
+from utils.logfire_helpers import log_anthropic_usage
 
 load_dotenv()
 
@@ -114,6 +115,7 @@ def generate_task_graph(state: AgentState) -> list[Task]:
         system=system,
         messages=[{"role": "user", "content": user_message}],
     )
+    log_anthropic_usage("supervisor", _SUPERVISOR_MODEL, msg)
     text = ""
     for block in msg.content:
         if hasattr(block, "text"):
@@ -148,6 +150,7 @@ def generate_correction_directive(state: AgentState) -> str:
         system=system,
         messages=[{"role": "user", "content": user_message}],
     )
+    log_anthropic_usage("supervisor", _SUPERVISOR_MODEL, msg)
     out = ""
     for block in msg.content:
         if hasattr(block, "text"):
@@ -156,11 +159,7 @@ def generate_correction_directive(state: AgentState) -> str:
 
 
 def supervisor_node(state: AgentState) -> AgentState:
-    with logfire.span(
-        "supervisor_agent",
-        goal_preview=state["goal"][:100],
-        task_count=len(state.get("task_graph", [])),
-    ):
+    with logfire.span("supervisor_agent", goal_preview=state["goal"][:100]):
         try:
             tasks = generate_task_graph(state)
         except Exception as e:
@@ -169,4 +168,5 @@ def supervisor_node(state: AgentState) -> AgentState:
             tasks = _fallback_task_graph()
         state["task_graph"] = tasks
         state["current_task_id"] = tasks[0].task_id if tasks else ""
+        logfire.info("supervisor_result", task_count=len(tasks))
     return state

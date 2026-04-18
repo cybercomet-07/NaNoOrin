@@ -12,6 +12,7 @@ from openai import OpenAI
 
 from llm_json import strip_code_fences
 from state import AgentState
+from utils.logfire_helpers import log_chat_completion_usage
 
 load_dotenv()
 
@@ -31,7 +32,7 @@ def generate_personas(state: AgentState) -> tuple[str, str]:
     ctx = state.get("research_output") or "Not yet available"
     user = f"Product goal: {state['goal']}\n\nMarket research context:\n{ctx}"
 
-    def _groq() -> str:
+    def _groq() -> tuple[str, object]:
         completion = _groq.chat.completions.create(
             model=GROQ_MODEL,
             messages=[
@@ -41,9 +42,10 @@ def generate_personas(state: AgentState) -> tuple[str, str]:
             temperature=0.3,
         )
         text = completion.choices[0].message.content or ""
-        return strip_code_fences(text).strip()
+        log_chat_completion_usage("persona", GROQ_MODEL, completion)
+        return strip_code_fences(text).strip(), completion
 
-    def _openai() -> str:
+    def _openai() -> tuple[str, object]:
         completion = _openai.chat.completions.create(
             model=OPENAI_FALLBACK_MODEL,
             messages=[
@@ -53,23 +55,24 @@ def generate_personas(state: AgentState) -> tuple[str, str]:
             temperature=0.3,
         )
         text = completion.choices[0].message.content or ""
-        return strip_code_fences(text).strip()
+        log_chat_completion_usage("persona", OPENAI_FALLBACK_MODEL, completion)
+        return strip_code_fences(text).strip(), completion
 
     try:
-        out = _groq()
+        out, _ = _groq()
         print("[persona] used model: groq-llama3-70b")
         return out, "groq-llama3-70b"
     except RateLimitError:
         print("[persona] Groq rate limited; falling back to OpenAI gpt-4o-mini")
         time.sleep(2)
-        out = _openai()
+        out, _ = _openai()
         print("[persona] used model: gpt-4o-mini")
         return out, "gpt-4o-mini"
 
 
 def persona_node(state: AgentState) -> AgentState:
-    with logfire.span("persona_agent"):
-        text, model_used = generate_personas(state)
-        state["personas"] = text
-        logfire.info("persona_model", model_used=model_used)
+    text, model_used = generate_personas(state)
+    state["personas"] = text
+    with logfire.span("persona_agent", model_used=model_used, goal_preview=state["goal"][:100]):
+        logfire.info("persona_complete")
     return state

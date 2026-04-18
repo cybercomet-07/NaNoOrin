@@ -14,6 +14,7 @@ from openai import OpenAI
 from llm_json import strip_code_fences
 from state import AgentState
 from tools.tavily_tools import search_competitors
+from utils.logfire_helpers import log_chat_completion_usage
 
 load_dotenv()
 
@@ -24,7 +25,7 @@ _groq = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
 _openai = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
 
 
-def _synthesize_with_groq(system: str, user: str) -> str:
+def _synthesize_with_groq(system: str, user: str) -> tuple[str, object]:
     completion = _groq.chat.completions.create(
         model=GROQ_MODEL,
         messages=[
@@ -34,10 +35,11 @@ def _synthesize_with_groq(system: str, user: str) -> str:
         temperature=0.2,
     )
     text = completion.choices[0].message.content or ""
-    return strip_code_fences(text).strip()
+    log_chat_completion_usage("researcher", GROQ_MODEL, completion)
+    return strip_code_fences(text).strip(), completion
 
 
-def _synthesize_with_openai(system: str, user: str) -> str:
+def _synthesize_with_openai(system: str, user: str) -> tuple[str, object]:
     completion = _openai.chat.completions.create(
         model=OPENAI_FALLBACK_MODEL,
         messages=[
@@ -47,7 +49,8 @@ def _synthesize_with_openai(system: str, user: str) -> str:
         temperature=0.2,
     )
     text = completion.choices[0].message.content or ""
-    return strip_code_fences(text).strip()
+    log_chat_completion_usage("researcher", OPENAI_FALLBACK_MODEL, completion)
+    return strip_code_fences(text).strip(), completion
 
 
 def run_market_research(state: AgentState) -> tuple[str, str]:
@@ -61,20 +64,24 @@ def run_market_research(state: AgentState) -> tuple[str, str]:
         "No markdown fences."
     )
     try:
-        text = _synthesize_with_groq(system, user)
+        text, _ = _synthesize_with_groq(system, user)
         print("[researcher] used model: groq-llama3-70b")
         return text, "groq-llama3-70b"
     except RateLimitError:
         print("[researcher] Groq rate limited; falling back to OpenAI gpt-4o-mini")
         time.sleep(2)
-        text = _synthesize_with_openai(system, user)
+        text, _ = _synthesize_with_openai(system, user)
         print("[researcher] used model: gpt-4o-mini")
         return text, "gpt-4o-mini"
 
 
 def researcher_node(state: AgentState) -> AgentState:
-    with logfire.span("researcher_agent", goal_preview=state["goal"][:100]):
-        text, model_used = run_market_research(state)
-        state["research_output"] = text
-        logfire.info("researcher_model", model_used=model_used)
+    text, model_used = run_market_research(state)
+    state["research_output"] = text
+    with logfire.span(
+        "researcher_agent",
+        model_used=model_used,
+        goal_preview=state["goal"][:100],
+    ):
+        logfire.info("researcher_complete")
     return state

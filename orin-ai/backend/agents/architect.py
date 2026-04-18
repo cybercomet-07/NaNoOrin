@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from llm_json import parse_json_object
 from state import AgentState, Architecture
+from utils.logfire_helpers import log_anthropic_usage
 
 load_dotenv()
 
@@ -39,6 +40,7 @@ def generate_architecture(state: AgentState) -> Architecture:
         system=system,
         messages=[{"role": "user", "content": user}],
     )
+    log_anthropic_usage("architect", _MODEL, msg)
     text = ""
     for block in msg.content:
         if hasattr(block, "text"):

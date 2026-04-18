@@ -13,6 +13,7 @@ from openai import OpenAI
 from llm_json import parse_json_object, strip_code_fences
 from state import AgentState, TestRun, build_agent_context, get_developer_prompt_mode
 from tools.e2b_tools import run_code_in_sandbox
+from utils.logfire_helpers import log_anthropic_usage, log_chat_completion_usage
 
 load_dotenv()
 
@@ -84,6 +85,7 @@ def generate_code(state: AgentState) -> dict[str, str]:
             system=system,
             messages=[{"role": "user", "content": user}],
         )
+        log_anthropic_usage("developer", _CLAUDE_MODEL, msg)
         text = ""
         for block in msg.content:
             if hasattr(block, "text"):
@@ -102,6 +104,7 @@ def generate_code(state: AgentState) -> dict[str, str]:
             ],
             temperature=0.2,
         )
+        log_chat_completion_usage("developer", _OPENAI_MODEL, completion)
         text = completion.choices[0].message.content or ""
         files = parse_json_object(strip_code_fences(text))
 
