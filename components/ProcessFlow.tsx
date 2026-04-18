@@ -21,7 +21,8 @@ export default function ProcessFlow({ agentStatuses }: Props) {
   const displayIndex = activeIndex !== -1 ? activeIndex : (lastPassedIndex !== -1 ? (AGENT_ORDER.length - 1 - lastPassedIndex) : -1)
 
   return (
-    <div className="w-full bg-[#0a0a0a] border-t border-[var(--terminal-border)] p-4 relative z-50">
+    <div className="w-full bg-surface/30 backdrop-blur-md border-t border-[var(--terminal-border)] p-4 relative z-50">
+    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none -z-10" />
       <div className="max-w-6xl mx-auto flex items-center justify-between px-8 relative">
         {/* Background Connection Line */}
         <div className="absolute top-1/2 left-16 right-16 h-[1px] bg-white/10 -translate-y-1/2 z-0" />

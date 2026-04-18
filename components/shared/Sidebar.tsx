@@ -30,7 +30,7 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: -256, opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="w-64 border-r border-white/5 bg-surface/50 h-screen flex flex-col pt-6 pb-4 fixed z-40 group"
+          className="w-64 border-r border-white/5 bg-transparent backdrop-blur-[2px] h-screen flex flex-col pt-6 pb-4 fixed z-40 group"
         >
           <div className="px-6 mb-12 flex items-center justify-between">
             <Logo />

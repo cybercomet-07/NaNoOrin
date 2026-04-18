@@ -41,7 +41,7 @@ export default function AgentChat() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a]">
+    <div className="flex flex-col h-full bg-transparent backdrop-blur-[1px]">
       {/* Header */}
       <div className="p-4 border-b border-white/5 bg-[#0d0d0d]/50 shrink-0">
         <h2 className="text-xs font-mono uppercase tracking-widest text-[var(--terminal-gray)]">

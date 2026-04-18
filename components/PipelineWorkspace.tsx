@@ -46,9 +46,9 @@ export default function PipelineWorkspace({
   const elapsedSec = startTime ? Math.floor((status === "FINALIZED" ? (lastTime - startTime) : (Date.now() - startTime)) / 1000) : 0;
 
   return (
-    <div className="h-full flex flex-col bg-[#050505] relative overflow-hidden">
+    <div className="h-full flex flex-col bg-transparent relative overflow-hidden backdrop-blur-[1px]">
       {/* Centered Tab Navigation */}
-      <div className="border-b border-white/5 bg-[#0a0a0a] flex justify-center items-center py-2 px-4 shadow-lg shrink-0">
+      <div className="border-b border-white/5 bg-surface/30 backdrop-blur-md flex justify-center items-center py-2 px-4 shadow-lg shrink-0">
         <div className="flex bg-white/5 p-1 rounded-full border border-white/5 space-x-1">
           <button
             onClick={() => setActiveTab("PREVIEW")}

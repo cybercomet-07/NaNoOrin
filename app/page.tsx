@@ -77,17 +77,15 @@ export default function LandingPage() {
                    textAlign="left"
                    delay={50}
                  />
-                 <div className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight min-h-[1.2em]">
-                    <SplitText 
-                      text="No Human in the Loop."
-                      tag="span"
-                      className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary"
-                      textAlign="left"
-                      delay={100}
-                      overflow="visible"
-                      from={{ opacity: 0, y: 15 }}
-                    />
-                 </div>
+                 <motion.h1 
+                   initial={{ opacity: 0, y: 15 }}
+                   whileInView={{ opacity: 1, y: 0 }}
+                   viewport={{ once: true }}
+                   transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
+                   className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary"
+                 >
+                    No Human in the Loop.
+                 </motion.h1>
                  <SplitText 
                    text="Working Code."
                    tag="h1"
@@ -219,7 +217,7 @@ export default function LandingPage() {
             />
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 perspective-1000">
             {[
               { title: "Market Research", icon: LineChart, desc: "Instant viable analysis of competitors, TAM, and target demographics." },
               { title: "AI Personas", icon: Bot, desc: "Synthesized synthetic users to battle-test your product before launch." },
@@ -228,26 +226,29 @@ export default function LandingPage() {
               { title: "Security Audit", icon: ShieldCheck, desc: "Sentinel agents review code for vulnerabilities and performance bottlenecks." },
               { title: "Website Generator", icon: Zap, desc: "Instantly deploy a beautiful landing page with our dynamic templates." },
             ].map((feature, i) => (
-              <Card key={i} className="bg-surface/50 hover:bg-surface border-white/5 hover:border-primary/30 transition-all group overflow-hidden">
-                <CardHeader>
-                  <feature.icon className="h-10 w-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
-                  <CardTitle>
-                    <SplitText text={feature.title} delay={40} textAlign="left" threshold={0.2} />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-sm">
-                    {feature.desc}
-                  </CardDescription>
-                </CardContent>
-              </Card>
+              <div key={i} className="isometric-card preserve-3d">
+                <Card className="h-full bg-surface/50 border-white/5 brutalist-grid preserve-3d group overflow-visible">
+                  <CardHeader className="preserve-3d pb-2">
+                    <div className="translate-z-50 mb-4 inline-block">
+                      <feature.icon className="h-10 w-10 text-primary group-hover:scale-110 transition-transform" />
+                    </div>
+                    <CardTitle className="translate-z-40">
+                      <SplitText text={feature.title} delay={40} textAlign="left" threshold={0.2} />
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="preserve-3d">
+                    <CardDescription className="text-sm translate-z-20">
+                      {feature.desc}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </div>
             ))}
           </div>
         </section>
 
-        {/* AI AGENTS SHOWCASE */}
-        <section className="container mx-auto px-4 md:px-6 py-24">
-          <div className="flex flex-col md:flex-row gap-12 items-center">
+        <section id="how-it-works" className="container mx-auto px-4 md:px-6 py-24">
+          <div id="about" className="flex flex-col md:flex-row gap-12 items-center">
             <div className="flex-1">
               <SplitText 
                 text="Meet OrinAI"
@@ -318,58 +319,70 @@ export default function LandingPage() {
             />
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-12 max-w-6xl mx-auto perspective-1000">
             {/* Free */}
-            <Card className="bg-surface border-white/10">
-              <CardHeader>
-                <CardTitle className="text-xl">Free</CardTitle>
-                <div className="text-4xl font-bold text-white mt-4">$0</div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2 text-sm text-white/70">
-                  <li className="flex items-center gap-2">✓ 1 Project generation/mo</li>
-                  <li className="flex items-center gap-2">✓ Basic market report</li>
-                  <li className="flex items-center gap-2">✓ Shared infrastructure</li>
-                </ul>
-                <Button variant="outline" className="w-full mt-6">Get Started</Button>
-              </CardContent>
-            </Card>
+            <div className="isometric-card preserve-3d">
+              <Card className="bg-surface border-white/10 brutalist-grid preserve-3d h-full overflow-visible">
+                <CardHeader className="preserve-3d pt-8">
+                  <CardTitle className="text-xl translate-z-40">Free</CardTitle>
+                  <div className="text-4xl font-bold text-white mt-4 translate-z-50">$0</div>
+                </CardHeader>
+                <CardContent className="space-y-4 preserve-3d">
+                  <ul className="space-y-2 text-sm text-white/70 translate-z-20 pb-6">
+                    <li className="flex items-center gap-2">✓ 1 Project generation/mo</li>
+                    <li className="flex items-center gap-2">✓ Basic market report</li>
+                    <li className="flex items-center gap-2">✓ Shared infrastructure</li>
+                  </ul>
+                  <div className="translate-z-30">
+                    <Button variant="outline" className="w-full">Get Started</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Pro */}
-            <Card className="bg-card border-primary relative shadow-[0_0_40px_rgba(199,255,61,0.1)] transform md:-translate-y-4">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-black text-xs font-bold px-3 py-1 rounded-full uppercase">
-                Most Popular
-              </div>
-              <CardHeader>
-                <CardTitle className="text-xl">Pro</CardTitle>
-                <div className="text-4xl font-bold text-white mt-4">$49<span className="text-lg text-muted font-normal">/mo</span></div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2 text-sm text-white">
-                  <li className="flex items-center gap-2 text-primary">✓ 50 Project generations/mo</li>
-                  <li className="flex items-center gap-2">✓ Advanced codebase access</li>
-                  <li className="flex items-center gap-2">✓ 1-Click website deployments</li>
-                  <li className="flex items-center gap-2">✓ Full architectural specs</li>
-                </ul>
-                <Button className="w-full mt-6">Subscribe</Button>
-              </CardContent>
-            </Card>
+            <div className="isometric-card preserve-3d">
+              <Card className="bg-card border-primary relative shadow-[0_0_40px_rgba(199,255,61,0.1)] brutalist-grid preserve-3d h-full overflow-visible border-2">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-black text-xs font-bold px-3 py-1 rounded-full uppercase translate-z-80 shadow-lg whitespace-nowrap z-20">
+                  Most Popular
+                </div>
+                <CardHeader className="preserve-3d pt-10">
+                  <CardTitle className="text-xl translate-z-40">Pro</CardTitle>
+                  <div className="text-4xl font-bold text-white mt-4 translate-z-50">$49<span className="text-lg text-muted font-normal">/mo</span></div>
+                </CardHeader>
+                <CardContent className="space-y-4 preserve-3d">
+                  <ul className="space-y-2 text-sm text-white translate-z-20 pb-6">
+                    <li className="flex items-center gap-2 text-primary font-semibold">✓ 50 Project generations/mo</li>
+                    <li className="flex items-center gap-2">✓ Advanced codebase access</li>
+                    <li className="flex items-center gap-2">✓ 1-Click website deployments</li>
+                    <li className="flex items-center gap-2">✓ Full architectural specs</li>
+                  </ul>
+                  <div className="translate-z-30">
+                    <Button className="w-full">Subscribe</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Enterprise */}
-            <Card className="bg-surface border-white/10">
-              <CardHeader>
-                <CardTitle className="text-xl">Enterprise</CardTitle>
-                <div className="text-4xl font-bold text-white mt-4">$299<span className="text-lg text-muted font-normal">/mo</span></div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2 text-sm text-white/70">
-                  <li className="flex items-center gap-2">✓ Unlimited generations</li>
-                  <li className="flex items-center gap-2">✓ Custom API integrations</li>
-                  <li className="flex items-center gap-2">✓ Dedicated Sentinel clusters</li>
-                </ul>
-                <Button variant="outline" className="w-full mt-6">Contact Sales</Button>
-              </CardContent>
-            </Card>
+            <div className="isometric-card preserve-3d">
+              <Card className="bg-surface border-white/10 brutalist-grid preserve-3d h-full overflow-visible">
+                <CardHeader className="preserve-3d pt-8">
+                  <CardTitle className="text-xl translate-z-40">Enterprise</CardTitle>
+                  <div className="text-4xl font-bold text-white mt-4 translate-z-50">$299<span className="text-lg text-muted font-normal">/mo</span></div>
+                </CardHeader>
+                <CardContent className="space-y-4 preserve-3d">
+                  <ul className="space-y-2 text-sm text-white/70 translate-z-20 pb-6">
+                    <li className="flex items-center gap-2">✓ Unlimited generations</li>
+                    <li className="flex items-center gap-2">✓ Custom API integrations</li>
+                    <li className="flex items-center gap-2">✓ Dedicated Sentinel clusters</li>
+                  </ul>
+                  <div className="translate-z-30">
+                    <Button variant="outline" className="w-full">Contact Sales</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </section>
 

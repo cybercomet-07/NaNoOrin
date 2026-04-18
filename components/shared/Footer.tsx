@@ -15,9 +15,9 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-white mb-4">Product</h4>
             <ul className="space-y-2 text-sm text-muted">
-              <li><Link href="#" className="hover:text-primary transition-colors">Features</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Pricing</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Showcase</Link></li>
+              <li><Link href="#product" className="hover:text-primary transition-colors">Features</Link></li>
+              <li><Link href="#pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
+              <li><Link href="#how-it-works" className="hover:text-primary transition-colors">Showcase</Link></li>
             </ul>
           </div>
           <div>
@@ -31,9 +31,9 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-white mb-4">Company</h4>
             <ul className="space-y-2 text-sm text-muted">
-              <li><Link href="#" className="hover:text-primary transition-colors">About Us</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Careers</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
+              <li><Link href="#about" className="hover:text-primary transition-colors">About Us</Link></li>
+              <li><Link href="#how-it-works" className="hover:text-primary transition-colors">Agents</Link></li>
+              <li><Link href="mailto:support@orinai.io" className="hover:text-primary transition-colors">Contact</Link></li>
             </ul>
           </div>
         </div>

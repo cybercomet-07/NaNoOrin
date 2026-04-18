@@ -15,7 +15,7 @@ export default function ReportPage() {
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-8 pb-12">
       {/* HEADER OVERVIEW */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-surface/50 p-8 rounded-2xl border border-white/5 backdrop-blur-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-surface/30 p-8 rounded-2xl border border-white/5 backdrop-blur-md shadow-lg shadow-black/20">
         <div>
           <Badge variant="success" className="mb-4">Project Generated Successfully</Badge>
           <h1 className="text-3xl font-bold text-white">StudentMarket</h1>
@@ -33,7 +33,7 @@ export default function ReportPage() {
 
       {/* DASHBOARD STATS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+          <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-sm">
           <CardHeader className="pb-2">
             <CardDescription>Security Score</CardDescription>
             <CardTitle className="text-3xl font-bold text-primary">98/100</CardTitle>
@@ -44,7 +44,7 @@ export default function ReportPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+          <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-sm">
           <CardHeader className="pb-2">
             <CardDescription>Market Competitiveness</CardDescription>
             <CardTitle className="text-3xl font-bold text-secondary">High</CardTitle>
@@ -55,7 +55,7 @@ export default function ReportPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+          <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-sm">
           <CardHeader className="pb-2">
             <CardDescription>Architecture Stack</CardDescription>
             <CardTitle className="text-3xl font-bold text-white">Next.js + Supabase</CardTitle>
@@ -68,7 +68,7 @@ export default function ReportPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+          <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-sm">
           <CardHeader className="pb-2">
             <CardDescription>Code Status</CardDescription>
             <CardTitle className="text-3xl font-bold text-white">Production Ready</CardTitle>
@@ -85,7 +85,7 @@ export default function ReportPage() {
       <div className="grid lg:grid-cols-3 gap-8">
         
         <div className="lg:col-span-2 space-y-8">
-          <Card>
+            <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-sm">
             <CardHeader>
               <CardTitle>Market Opportunity</CardTitle>
             </CardHeader>
@@ -104,7 +104,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
 
-          <Card>
+            <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-sm">
             <CardHeader>
               <CardTitle>Generated Architecture</CardTitle>
             </CardHeader>
@@ -128,7 +128,7 @@ export default function ReportPage() {
         </div>
 
         <div className="space-y-8">
-          <Card>
+            <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-sm">
             <CardHeader>
               <CardTitle>User Personas</CardTitle>
             </CardHeader>
@@ -150,7 +150,7 @@ export default function ReportPage() {
             </CardContent>
           </Card>
 
-          <Card>
+            <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-sm">
             <CardHeader>
               <CardTitle>Feature Roadmap</CardTitle>
             </CardHeader>

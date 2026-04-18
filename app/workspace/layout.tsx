@@ -5,9 +5,28 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
+import { SnowBackground } from "@/components/shared/SnowBackground";
 
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const pathname = usePathname();
+
+  const snowRoutes = ["/workspace", "/workspace/history", "/workspace/report", "/workspace/settings"];
+  const shouldShowSnow = snowRoutes.includes(pathname);
+
+  const content = (
+    <div className="p-8">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="h-full pt-12 md:pt-0"
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background flex text-white selection:bg-primary/30">
@@ -26,7 +45,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="fixed top-6 left-6 z-50"
+            className="fixed top-6 left-6 z-50 transition-all"
           >
             <Button
               variant="ghost"
@@ -39,16 +58,11 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
           </motion.div>
         )}
 
-        <div className="p-8">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="h-full pt-12 md:pt-0"
-          >
-            {children}
-          </motion.div>
-        </div>
+        {shouldShowSnow ? (
+          <SnowBackground>{content}</SnowBackground>
+        ) : (
+          content
+        )}
       </motion.main>
     </div>
   );
