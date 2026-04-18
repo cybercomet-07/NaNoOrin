@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Logo } from "./Logo";
 import { Clock, FileText, LayoutDashboard, LogOut, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import BorderGlow from "@/components/BorderGlow";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -26,31 +27,55 @@ export function Sidebar() {
         {links.map((link) => {
           const isActive = pathname === link.href || (link.href !== "/workspace" && pathname.startsWith(link.href));
           return (
-            <Link
+            <BorderGlow
               key={link.href}
-              href={link.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all",
-                isActive 
-                  ? "bg-primary/10 text-primary" 
-                  : "text-muted hover:bg-white/5 hover:text-white"
-              )}
+              className="w-full rounded-md !border-none"
+              edgeSensitivity={30}
+              glowColor="84 100 61"
+              backgroundColor={isActive ? "rgba(199,255,61,0.1)" : "transparent"}
+              borderRadius={6}
+              glowRadius={15}
+              glowIntensity={1}
+              animated={false}
+              colors={['#c084fc', '#f472b6', '#38bdf8']}
             >
-              <link.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
-              {link.label}
-            </Link>
+              <Link
+                href={link.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all w-full h-full relative z-10",
+                  isActive 
+                    ? "text-primary" 
+                    : "text-muted hover:text-white"
+                )}
+              >
+                <link.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
+                {link.label}
+              </Link>
+            </BorderGlow>
           );
         })}
       </nav>
 
-      <div className="px-3 mt-auto">
-        <Link
-          href="/"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-red-500 hover:bg-red-500/10 transition-all"
+      <div className="px-3 mt-auto mb-4">
+        <BorderGlow
+          className="w-full rounded-md !border-none"
+          edgeSensitivity={30}
+          glowColor="0 100 50" // Red glow for logout
+          backgroundColor="transparent"
+          borderRadius={6}
+          glowRadius={15}
+          glowIntensity={1}
+          animated={false}
+          colors={['#ef4444', '#f87171', '#fca5a5']}
         >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </Link>
+          <Link
+            href="/"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-red-500 transition-all w-full h-full relative z-10"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Link>
+        </BorderGlow>
       </div>
     </aside>
   );

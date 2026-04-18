@@ -82,19 +82,23 @@ export default function AuthPage() {
           </div>
 
           {/* Custom Tabs */}
-          <div className="flex bg-surface p-1 rounded-lg mb-8 border border-white/5">
-            <button 
-              className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-all ${isLogin ? "bg-card text-white shadow" : "text-muted hover:text-white"}`}
+          <div className="flex bg-surface p-1 gap-1 rounded-lg mb-8 border border-white/5">
+            <Button 
+              type="button"
+              variant="ghost"
+              className={`flex-1 h-auto py-2 px-4 transition-all ${isLogin ? "bg-card text-white shadow shadow-black/50 hover:bg-card hover:bg-card/90" : "text-muted"}`}
               onClick={() => setIsLogin(true)}
             >
               Login
-            </button>
-            <button 
-              className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-all ${!isLogin ? "bg-card text-white shadow" : "text-muted hover:text-white"}`}
+            </Button>
+            <Button 
+              type="button"
+              variant="ghost"
+              className={`flex-1 h-auto py-2 px-4 transition-all ${!isLogin ? "bg-card text-white shadow shadow-black/50 hover:bg-card hover:bg-card/90" : "text-muted"}`}
               onClick={() => setIsLogin(false)}
             >
               Sign Up
-            </button>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,107 +1,235 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Logo } from "@/components/shared/Logo";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef } from "react";
+import { usePipelineStream, AgentEvent, AgentStatus } from "@/hooks/usePipelineStream";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Loader2, Download, FileText, AlertCircle } from "lucide-react";
 
-const AGENTS = [
-  { id: "SCOUT", role: "Analyzing competitors..." },
-  { id: "PERSONA", role: "Simulating user flow..." },
-  { id: "BLUEPRINT", role: "Designing architecture..." },
-  { id: "FORGE", role: "Generating backend & frontend..." },
-  { id: "VERDICT", role: "Running tests..." },
-  { id: "SENTINEL", role: "Preparing report & audits..." }
-];
+/* ─── Left Panel: Agent Status Cards ─── */
+function AgentFeed({ agentStatuses }: { agentStatuses: Record<string, AgentStatus> }) {
+  const statusColors: Record<string, string> = {
+    PENDING: "text-gray-500",
+    RUNNING: "text-yellow-400",
+    PASSED: "text-green-400",
+    FAILED: "text-red-400",
+  };
 
-export default function ProcessingPage() {
-  const router = useRouter();
-  const [activeStep, setActiveStep] = useState(0);
-
-  useEffect(() => {
-    if (activeStep < AGENTS.length) {
-      const timer = setTimeout(() => {
-        setActiveStep(prev => prev + 1);
-      }, 1500); // 1.5s per agent step
-      return () => clearTimeout(timer);
-    } else {
-      // Finished all agents, redirect to report
-      setTimeout(() => {
-        router.push("/workspace/report");
-      }, 1000);
-    }
-  }, [activeStep, router]);
-
-  const progress = Math.min(((activeStep + 1) / AGENTS.length) * 100, 100);
+  const agents = Object.values(agentStatuses);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background">
-      {/* Background glow */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center">
-        <div className="w-[80vw] h-[80vw] max-w-4xl max-h-4xl rounded-full bg-primary/5 blur-[120px] animate-pulse" />
+    <Card className="h-full bg-surface/50 border-white/5 flex flex-col">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg flex justify-between items-center">
+          <span>Agent Feed</span>
+          <Badge variant="outline">{agents.length} Agents</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 overflow-y-auto space-y-3 relative z-10">
+        {agents.map((agent) => (
+          <div key={agent.name} className="border border-zinc-800 rounded p-3 mb-2 bg-zinc-950">
+            <div className="flex justify-between items-center">
+              <span className="font-mono text-sm text-zinc-300">{agent.name}</span>
+              <span className={`text-xs font-bold ${statusColors[agent.status] || "text-white"}`}>
+                {agent.status}
+              </span>
+            </div>
+            {agent.iteration > 0 && (
+              <div className="text-xs text-zinc-600 mt-1">Retry #{agent.iteration}</div>
+            )}
+            {agent.lastOutput && (
+              <div className="text-xs text-zinc-500 mt-2 border-t border-white/5 pt-2 italic truncate">
+                {agent.lastOutput}
+              </div>
+            )}
+          </div>
+        ))}
+        {agents.length === 0 && (
+          <div className="text-center text-muted py-8 text-sm">
+            Waiting for pipeline to commence...
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Center Panel: Terminal / Event Log ─── */
+function TerminalPanel({ events }: { events: AgentEvent[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [events]);
+
+  const formatEvent = (ev: AgentEvent): string => {
+    const ts = ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString() : "";
+    switch (ev.event_type) {
+      case "agent_start":
+        return `[${ts}] ▶ ${ev.agent} started (iteration ${ev.iteration})`;
+      case "agent_complete":
+        return `[${ts}] ✓ ${ev.agent} completed`;
+      case "test_result":
+        const passed = ev.payload?.passed ? "PASS" : "FAIL";
+        return `[${ts}] 🧪 Test ${passed} — ${ev.agent} (iteration ${ev.iteration})`;
+      case "status_update":
+        return `[${ts}] ⚡ Status → ${ev.payload?.status}`;
+      default:
+        return `[${ts}] ${JSON.stringify(ev)}`;
+    }
+  };
+
+  return (
+    <Card className="h-full bg-[#0a0a0a] border-white/5 flex flex-col rounded-md shadow-2xl relative">
+      {/* macOS-style terminal header */}
+      <div className="py-3 px-4 bg-white/5 border-b border-white/5 rounded-t-md relative z-10 flex items-center justify-between">
+        <div className="flex space-x-2">
+          <div className="w-3 h-3 rounded-full bg-red-500/80" />
+          <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+          <div className="w-3 h-3 rounded-full bg-green-500/80" />
+        </div>
+        <div className="text-xs text-muted font-mono">bash — orin_pipeline</div>
+      </div>
+      <CardContent
+        className="flex-1 p-4 font-mono text-xs md:text-sm text-green-400 overflow-y-auto whitespace-pre-wrap relative z-10"
+        ref={scrollRef}
+      >
+        {events.length > 0
+          ? events.map((ev, i) => <div key={i}>{formatEvent(ev)}</div>)
+          : "Connecting to secure OrinAI environment...\n> "}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Right Panel: Output Artifacts ─── */
+function ArtifactPanel({
+  status,
+  codeFiles,
+}: {
+  status: string;
+  codeFiles: Record<string, string>;
+}) {
+  const fileNames = Object.keys(codeFiles);
+
+  return (
+    <Card className="h-full bg-surface/50 border-white/5 flex flex-col">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg">Output Artifacts</CardTitle>
+      </CardHeader>
+      <CardContent className="relative z-10 flex-1 overflow-y-auto">
+        {status === "FINALIZED" ? (
+          <div className="space-y-4">
+            <div className="border border-primary/20 bg-primary/5 rounded-lg p-4 text-center">
+              <div className="text-primary font-bold mb-2">Project Generation Complete</div>
+              <Badge variant="default" className="text-black bg-primary">
+                {fileNames.length} Files Ready
+              </Badge>
+            </div>
+
+            {/* File listing */}
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {fileNames.map((name) => (
+                <div
+                  key={name}
+                  className="flex items-center gap-2 p-2 rounded-md bg-background border border-white/5 text-xs font-mono text-zinc-300"
+                >
+                  <FileText className="w-3 h-3 text-primary shrink-0" />
+                  <span className="truncate">{name}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" className="w-full">
+                <Download className="w-4 h-4 mr-2" />
+                Download .zip Payload
+              </Button>
+              <Button className="w-full">View Complete Report</Button>
+            </div>
+          </div>
+        ) : status === "FAILED" ? (
+          <div className="border border-red-500/20 bg-red-500/5 rounded-lg p-4 text-center">
+            <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-3" />
+            <div className="text-red-500 font-bold mb-2">Pipeline Terminated</div>
+            <div className="text-xs text-muted">
+              A critical failure occurred during multi-agent synchronization. Check the terminal
+              logs.
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-48 opacity-50 mt-12 bg-black/40 rounded-lg border border-white/5">
+            <Loader2 className="w-8 h-8 animate-spin text-muted mb-4" />
+            <div className="text-sm font-medium text-white">Aggregating Artifacts...</div>
+            <div className="text-xs text-muted mt-1">Files will populate post-compilation.</div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Main Dashboard ─── */
+function ProcessingDashboard() {
+  const searchParams = useSearchParams();
+  const runId =
+    searchParams?.get("runId") || "demo-run-" + Math.floor(Math.random() * 1000);
+  const { events, status, agentStatuses, codeFiles, error } =
+    usePipelineStream(runId);
+
+  return (
+    <div className="min-h-screen bg-background p-4 lg:p-8 flex flex-col">
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-white mb-2">
+            Live Pipeline Telemetry
+          </h1>
+          <p className="text-sm text-muted flex items-center flex-wrap gap-2">
+            <span>
+              Stream ID:{" "}
+              <span className="font-mono text-primary font-medium">{runId}</span>
+            </span>
+            <Badge
+              variant="outline"
+              className={`opacity-80 ${
+                status === "RUNNING" ? "border-primary/50 text-primary" : ""
+              }`}
+            >
+              Status: {status}
+            </Badge>
+          </p>
+        </div>
+        {error && (
+          <div className="text-xs text-yellow-400 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            {error}
+          </div>
+        )}
       </div>
 
-      <div className="relative z-10 w-full max-w-3xl px-6 text-center">
-        <div className="flex justify-center mb-12">
-          <Logo />
-        </div>
-
-        <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4">
-          Building Your Project...
-        </h1>
-        <p className="text-lg text-muted mb-16 h-8">
-          {AGENTS[Math.min(activeStep, AGENTS.length - 1)].role}
-        </p>
-
-        {/* Neural Network Nodes Sequence */}
-        <div className="relative flex justify-between items-center mb-24 max-w-2xl mx-auto">
-          {/* Progress Line */}
-          <div className="absolute top-1/2 left-0 w-full h-1 bg-white/5 -translate-y-1/2 z-0" />
-          <motion.div 
-            className="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 z-0"
-            initial={{ width: "0%" }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5 }}
-          />
-
-          {AGENTS.map((agent, index) => {
-            const isCompleted = index < activeStep;
-            const isActive = index === activeStep;
-            
-            return (
-              <div key={agent.id} className="relative z-10 flex flex-col items-center group">
-                <motion.div 
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: isActive ? 1.2 : 1, opacity: 1 }}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    isCompleted ? "bg-primary border-primary text-black" :
-                    isActive ? "bg-surface border-2 border-primary shadow-[0_0_20px_rgba(199,255,61,0.5)] bg-primary/10" :
-                    "bg-surface border border-white/10 text-muted"
-                  }`}
-                >
-                  {isCompleted ? (
-                    <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <span className="text-xs font-bold">{index + 1}</span>
-                  )}
-                </motion.div>
-                <div className="absolute top-16 whitespace-nowrap text-xs font-mono font-medium transition-colors duration-300" 
-                  style={{ color: isActive ? "#C7FF3D" : isCompleted ? "#fff" : "#A1A1AA" }}>
-                  {agent.id}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Global Progress Base */}
-        <div className="w-full max-w-sm mx-auto flex flex-col items-center">
-          <div className="text-2xl font-bold text-white mb-2">{Math.round(progress)}%</div>
-          <div className="text-xs text-muted">Estimated time remaining: 00:0{6 - activeStep}</div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-160px)] lg:h-[calc(100vh-140px)] min-h-[600px]">
+        <AgentFeed agentStatuses={agentStatuses} />
+        <TerminalPanel events={events} />
+        <ArtifactPanel status={status} codeFiles={codeFiles} />
       </div>
     </div>
+  );
+}
+
+export default function ProcessingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex justify-center items-center">
+          <Loader2 className="animate-spin w-8 h-8 text-primary" />
+        </div>
+      }
+    >
+      <ProcessingDashboard />
+    </Suspense>
   );
 }

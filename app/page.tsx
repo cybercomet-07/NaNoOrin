@@ -1,15 +1,56 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/shared/Navbar";
 import { Footer } from "@/components/shared/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Bot, Code, Cpu, LineChart, Lock, ShieldCheck, Zap } from "lucide-react";
-import Link from "next/link";
+import { ArrowRight, Bot, Code, Cpu, LineChart, Lock, Loader2, ShieldCheck, Zap } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 
+const EXAMPLE_PROMPTS = [
+  "Build a FastAPI REST API for a task manager with JWT auth, PostgreSQL, and pytest tests",
+  "Build a Python service using fastchroma for vector search with semantic similarity",
+  "Build a real-time chat API with WebSockets, user rooms, and message history",
+];
+
 export default function LandingPage() {
+  const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  const startPipeline = async () => {
+    if (!prompt.trim() || prompt.length < 10) {
+      setError("Prompt must be at least 10 characters");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt.trim() }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to start pipeline");
+      }
+
+      const { run_id } = await res.json();
+      router.push(`/run/${run_id}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background relative selection:bg-primary/30 selection:text-white">
       {/* Background Effects */}
@@ -21,8 +62,8 @@ export default function LandingPage() {
       <Navbar />
 
       <main className="relative z-10">
-        {/* HERO SECTION */}
-        <section className="container mx-auto px-4 md:px-6 pt-24 pb-32">
+        {/* HERO + PROMPT SECTION */}
+        <section className="container mx-auto px-4 md:px-6 pt-24 pb-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -36,30 +77,18 @@ export default function LandingPage() {
               </div>
               
               <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight">
-                Your Startup Idea. <br />
+                One Prompt. <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
-                  One Prompt.
+                  No Human in the Loop.
                 </span> <br />
-                A Complete AI Workforce.
+                Working Code.
               </h1>
               
               <p className="text-lg md:text-xl text-muted max-w-xl">
-                OrinAI deploys intelligent AI agents that research, architect, code, validate and launch your startup faster than any team.
+                OrinAI deploys intelligent AI agents that research, architect, code, test, and audit your entire project — autonomously.
               </p>
-              
-              <div className="flex flex-wrap items-center gap-4 mt-4">
-                <Link href="/login">
-                  <Button size="lg" className="h-12 px-8 text-base font-semibold group">
-                    Start Building
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
-                <Button size="lg" variant="outline" className="h-12 px-8 text-base">
-                  Watch Demo
-                </Button>
-              </div>
 
-              <div className="flex items-center gap-6 mt-8 text-sm text-muted font-medium">
+              <div className="flex items-center gap-6 mt-4 text-sm text-muted font-medium">
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-primary" /> Under 10 Minutes
                 </div>
@@ -72,7 +101,7 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Mockup Right Side */}
+            {/* RIGHT: PROMPT INPUT */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -80,32 +109,70 @@ export default function LandingPage() {
               className="relative"
             >
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-primary/20 via-transparent to-secondary/20 blur-xl" />
-              <div className="relative rounded-2xl border border-white/10 bg-surface/50 p-2 backdrop-blur-md shadow-2xl shadow-black">
-                <div className="rounded-xl border border-white/5 bg-card overflow-hidden">
-                  <div className="h-8 border-b border-white/5 bg-surface/80 flex items-center px-4 gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                    <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                  </div>
-                  <div className="p-6 bg-[#0A0A0A] aspect-[4/3] flex flex-col justify-center gap-4">
-                    <div className="animate-pulse flex space-x-4">
-                      <div className="rounded-full bg-primary/20 h-10 w-10"></div>
-                      <div className="flex-1 space-y-4 py-1">
-                        <div className="h-2 bg-white/10 rounded w-3/4"></div>
-                        <div className="space-y-2">
-                          <div className="h-2 bg-white/10 rounded"></div>
-                          <div className="h-2 bg-white/10 rounded w-5/6"></div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Simulated code / generation log */}
-                    <div className="font-mono text-xs text-secondary/70 mt-4 space-y-1">
-                      <p>❯ [SCOUT] Analyzing market fit...</p>
-                      <p className="text-primary">✓ Competitor gap identified.</p>
-                      <p>❯ [BLUEPRINT] Architecting database schema...</p>
-                      <p className="text-primary">✓ PostgreSQL tables mapped.</p>
-                      <p className="animate-pulse text-white">❯ [FORGE] Compiling Next.js components...</p>
-                    </div>
+              <div className="relative rounded-2xl border border-white/10 bg-surface/50 p-6 backdrop-blur-md shadow-2xl shadow-black flex flex-col gap-4">
+                {/* Terminal header */}
+                <div className="flex items-center gap-2 px-1">
+                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
+                  <span className="text-xs text-muted font-mono ml-2">orin — prompt_engine</span>
+                </div>
+
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Describe what you want to build..."
+                  rows={5}
+                  className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg p-4 
+                             text-white font-mono text-sm resize-none
+                             focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30
+                             placeholder:text-zinc-600 transition-all"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) startPipeline();
+                  }}
+                />
+
+                {error && (
+                  <p className="text-red-400 text-sm font-mono">⚠ {error}</p>
+                )}
+
+                <Button
+                  onClick={startPipeline}
+                  disabled={loading || !prompt.trim()}
+                  className="w-full h-12 text-base font-bold group"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Starting Orin AI...
+                    </>
+                  ) : (
+                    <>
+                      ▶ Run Orin AI
+                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-zinc-600 text-xs text-center font-mono">
+                  ⌘ + Enter to run
+                </p>
+
+                {/* Example Prompts */}
+                <div className="border-t border-white/5 pt-4 mt-1">
+                  <p className="text-zinc-600 text-xs font-mono mb-3">— example prompts —</p>
+                  <div className="space-y-2">
+                    {EXAMPLE_PROMPTS.map((p, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setPrompt(p)}
+                        className="w-full text-left text-xs font-mono text-zinc-500 
+                                   hover:text-white p-2 rounded border 
+                                   border-transparent hover:border-white/10 hover:bg-white/5 transition-all"
+                      >
+                        › {p}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
