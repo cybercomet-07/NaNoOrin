@@ -471,6 +471,8 @@ def make_event(
 # - All SSE events use make_event() helper
 ```
 
+**Implemented:** `backend/models.py` (Pydantic v2) defines `RunRequest`, `RunResponse`, `StatusResponse`, `ArtifactsResponse`, `TraceResponse`, `HealthResponse`, `AgentEvent`, and `make_event()`. `main.py` uses `response_model` on routes and imports `make_event` from `models`. `AgentEvent` includes optional `status` for SSE terminal detection; health uses `e2b_connected` / `tavily_connected` / `redis_connected` per model. `RunRequest.prompt` has `min_length=10`, `max_length=2000`.
+
 ---
 
 ## GAP 4 — JOIN NODE (PARALLEL MERGE LOGIC)
@@ -1338,7 +1340,7 @@ TEAM AGREEMENT (before ANY code):
 [ ] PROMPT 0.1  — Scaffold
 [ ] PROMPT 0.2  — Prompt files
 [ ] PROMPT 1.1  — AgentState  ← FREEZE THIS. No changes without team vote.
-[ ] PROMPT G3.1 — API models  ← Define the contract everyone codes to
+[x] PROMPT G3.1 — API models  ← Define the contract everyone codes to
 
 DAY 1 — CORE ENGINE (priority order from PDF):
 [ ] PROMPT G1.1 — docker-compose + Dockerfiles

@@ -18,7 +18,7 @@ import json
 import os
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from typing import Literal, cast
 
 import logfire
 import redis.asyncio as aioredis
@@ -26,8 +26,19 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
+
+from models import (
+    ArtifactsResponse,
+    HealthResponse,
+    RunRequest,
+    RunResponse,
+    StatusResponse,
+    TraceResponse,
+    make_event,
+)
+
+_StatusLiteral = Literal["RUNNING", "FAILED", "PANIC", "FINALIZED", "UNKNOWN"]
 
 # ---------------------------------------------------------------------------
 # Phase 8.2 — fail fast on missing keys / broken E2B (set ORIN_SKIP_STARTUP_VALIDATION=1 to skip)
@@ -149,39 +160,15 @@ from llm_clients import validate_all_keys
 validate_all_keys()
 
 
-# ---------------------------------------------------------------------------
-# Request model
-# ---------------------------------------------------------------------------
-class RunRequest(BaseModel):
-    prompt: str
-
-
-# ---------------------------------------------------------------------------
-# Helper — structured SSE event
-# ---------------------------------------------------------------------------
-def make_event(
-    event_type: str,
-    agent: str = "",
-    task_id: str = "",
-    iteration: int = 0,
-    payload: dict | None = None,
-    status: str = "",
-) -> dict:
-    return {
-        "event_type": event_type,
-        "agent": agent,
-        "task_id": task_id,
-        "iteration": iteration,
-        "payload": payload or {},
-        "status": status,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
+def _normalize_status(raw: str) -> _StatusLiteral:
+    allowed: frozenset[str] = frozenset({"RUNNING", "FAILED", "PANIC", "FINALIZED", "UNKNOWN"})
+    return cast(_StatusLiteral, raw if raw in allowed else "UNKNOWN")
 
 
 # ---------------------------------------------------------------------------
 # POST /run — start a pipeline run (non-blocking)
 # ---------------------------------------------------------------------------
-@app.post("/run")
+@app.post("/run", response_model=RunResponse)
 async def run(body: RunRequest):
     """
     Accepts {"prompt": str}.
@@ -196,7 +183,7 @@ async def run(body: RunRequest):
 
     asyncio.create_task(execute_pipeline(run_id, body.prompt, queue))
 
-    return {"run_id": run_id}
+    return RunResponse(run_id=run_id)
 
 
 # ---------------------------------------------------------------------------
@@ -234,47 +221,64 @@ async def stream(run_id: str):
 # ---------------------------------------------------------------------------
 # GET /status/{run_id} — polling fallback
 # ---------------------------------------------------------------------------
-@app.get("/status/{run_id}")
+@app.get("/status/{run_id}", response_model=StatusResponse)
 async def status(run_id: str):
     """Returns current status. Use when SSE connection drops."""
     current = await _get_status(run_id)
     if current == "UNKNOWN" and run_id not in run_queues:
         raise HTTPException(status_code=404, detail=f"run_id {run_id!r} not found")
-    return {"run_id": run_id, "status": current}
+    norm = _normalize_status(current)
+    return StatusResponse(
+        run_id=run_id,
+        status=norm,
+        iteration_count=0,
+        agents_completed=[],
+        elapsed_seconds=None,
+    )
 
 
 # ---------------------------------------------------------------------------
 # GET /artifacts/{run_id} — download generated code files
 # ---------------------------------------------------------------------------
-@app.get("/artifacts/{run_id}")
+@app.get("/artifacts/{run_id}", response_model=ArtifactsResponse)
 async def artifacts(run_id: str):
     """Returns generated code files. Available after FINALIZED status."""
     files = await _get_artifacts(run_id)
     current_status = await _get_status(run_id)
     if current_status == "UNKNOWN" and run_id not in run_queues:
         raise HTTPException(status_code=404, detail=f"run_id {run_id!r} not found")
-    return {"run_id": run_id, "files": files}
+    norm = _normalize_status(current_status)
+    code_files: dict[str, str] = {k: str(v) for k, v in files.items()} if isinstance(files, dict) else {}
+    return ArtifactsResponse(
+        run_id=run_id,
+        files=code_files,
+        total_files=len(code_files),
+        test_passed=norm == "FINALIZED",
+        audit_passed=norm == "FINALIZED",
+    )
 
 
 # ---------------------------------------------------------------------------
 # GET /trace/{run_id} — Logfire trace URL
 # ---------------------------------------------------------------------------
-@app.get("/trace/{run_id}")
+@app.get("/trace/{run_id}", response_model=TraceResponse)
 async def trace(run_id: str):
     """Returns Logfire dashboard URL. Open this during demo."""
     current = await _get_status(run_id)
     if current == "UNKNOWN" and run_id not in run_queues:
         raise HTTPException(status_code=404, detail=f"run_id {run_id!r} not found")
-    return {
-        "run_id": run_id,
-        "trace_url": f"https://logfire.pydantic.dev/orin-ai/traces/{run_id}",
-    }
+    project = os.getenv("LOGFIRE_PROJECT", "orin-ai")
+    return TraceResponse(
+        run_id=run_id,
+        trace_url=f"https://logfire.pydantic.dev/{project}/traces/{run_id}",
+        logfire_project=project,
+    )
 
 
 # ---------------------------------------------------------------------------
 # GET /health — service health check
 # ---------------------------------------------------------------------------
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse)
 async def health():
     """
     Orin plan: {"status": "ok", "e2b": bool, "tavily": bool, "redis": bool}.
@@ -294,12 +298,13 @@ async def health():
     except Exception:
         redis_ok = False
 
-    return {
-        "status": "ok",
-        "e2b": e2b_ok,
-        "tavily": tavily_ok,
-        "redis": redis_ok,
-    }
+    return HealthResponse(
+        status="ok",
+        e2b_connected=e2b_ok,
+        tavily_connected=tavily_ok,
+        redis_connected=redis_ok,
+        version="1.0.0",
+    )
 
 
 # ---------------------------------------------------------------------------
