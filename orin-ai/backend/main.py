@@ -29,6 +29,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from llm_clients import gemini_client, groq_client  # noqa: F401 — ensures env vars loaded
+
 # ---------------------------------------------------------------------------
 # Phase 8.2 — fail fast on missing keys / broken E2B (set ORIN_SKIP_STARTUP_VALIDATION=1 to skip)
 # ---------------------------------------------------------------------------

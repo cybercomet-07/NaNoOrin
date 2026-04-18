@@ -1,8 +1,8 @@
 fastapi
-uvicorn[standard]
+uvicorn
 langgraph
-anthropic
 openai
+google-generativeai
 groq
 tavily-python
 e2b-code-interpreter
@@ -10,6 +10,5 @@ logfire[fastapi]
 sse-starlette
 pydantic
 python-dotenv
-httpx
 pytest
 pytest-asyncio

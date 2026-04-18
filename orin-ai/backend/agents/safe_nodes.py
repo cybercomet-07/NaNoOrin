@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 import logfire
 
+from llm_clients import call_gemini, call_gemini_lite, call_groq, GEMINI_FLASH, GEMINI_FLASH_LITE, GROQ_LLAMA  # noqa: F401
 from state import AgentState
 
 

@@ -642,7 +642,7 @@ Import AgentState from state.py.
 
 Build the complete graph following these EXACT phases from the architecture:
 
-PHASE 1 — Scout Swarm (Parallel fan-out):
+PHASE 1 — Parallel discovery (Researcher + Persona fan-out):
 - supervisor runs first
 - supervisor_node returns Send() objects for BOTH researcher and persona simultaneously
 - Use LangGraph's Send() API for fan-out
@@ -1174,7 +1174,7 @@ One prompt. No human in the loop. Working, tested, audited code in under 10 minu
 (list the full lifecycle: User Prompt → Market Research → Personas → Architecture → Code+Test Loop → Security Audit → MVP)
 
 ## Architecture
-(include the 4-phase breakdown from the brief: Scout Swarm, Blueprint, Production Loop, Security Gate)
+(include the 4-phase breakdown from the brief: Parallel discovery, Blueprint, Production Loop, Security Gate)
 
 ## The Five Agents
 (table: Agent | Model | Role | Key Tool)

@@ -19,32 +19,19 @@ def validate_environment() -> None:
     load_dotenv()
 
     required_keys = {
-        "ANTHROPIC_API_KEY": "Claude agents (Supervisor, Architect, Developer, Auditor)",
-        "GROQ_API_KEY": "Researcher and Persona agents (fast inference)",
+        "GOOGLE_API_KEY": "Gemini (Supervisor, Architect, Developer, Persona, Auditor)",
+        "GROQ_API_KEY": "Researcher agent (fast inference)",
         "TAVILY_API_KEY": "Market research search",
         "E2B_API_KEY": "Code execution sandbox (CRITICAL — demo breaks without this)",
         "LOGFIRE_TOKEN": "Observability dashboard (open during demo)",
     }
 
-    optional_keys = {
-        "OPENAI_API_KEY": "GPT-4o-mini fallback if Groq rate-limits",
-    }
-
     errors: list[str] = []
-    warnings: list[str] = []
 
     for key, description in required_keys.items():
         value = os.getenv(key)
         if not value or value.endswith("..."):
             errors.append(f"MISSING: {key} — needed for {description}")
-
-    for key, description in optional_keys.items():
-        if not os.getenv(key):
-            warnings.append(f"OPTIONAL MISSING: {key} — {description}")
-
-    if warnings:
-        for w in warnings:
-            print(f"⚠️  {w}")
 
     if errors:
         print("\n❌ Orin AI startup FAILED. Fix these before demo:\n")

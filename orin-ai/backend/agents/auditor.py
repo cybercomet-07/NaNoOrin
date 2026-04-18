@@ -1,24 +1,16 @@
-"""Auditor agent — regex security scan + optional Haiku review."""
+"""Auditor agent — regex security scan + Gemini Flash-Lite review."""
 
 from __future__ import annotations
 
 import json
-import os
 import re
 from typing import Any
 
 import logfire
-from anthropic import Anthropic
-from dotenv import load_dotenv
 
+from llm_clients import call_gemini, call_gemini_lite, call_groq, GEMINI_FLASH, GEMINI_FLASH_LITE, GROQ_LLAMA  # noqa: F401
 from llm_json import parse_json_object
 from state import AgentState
-from utils.logfire_helpers import log_anthropic_usage
-
-load_dotenv()
-
-_HAIKU_MODEL = "claude-haiku-4-5-20251001"
-_client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
 
 _SECRET_RE = re.compile(r"[A-Za-z0-9]{32,}")
 _SQL_FSTRING = re.compile(r'f["\'][\s\S]*?SELECT', re.IGNORECASE)
@@ -87,17 +79,7 @@ def llm_security_review(code_files: dict[str, str], regex_violations: list) -> d
         f"Regex findings (may include false positives):\n{json.dumps(regex_violations, indent=2)[:8000]}\n\n"
         f"Code:\n{bundle[:100000]}"
     )
-    msg = _client.messages.create(
-        model=_HAIKU_MODEL,
-        max_tokens=4096,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    log_anthropic_usage("auditor", _HAIKU_MODEL, msg)
-    text = ""
-    for block in msg.content:
-        if hasattr(block, "text"):
-            text += block.text
+    text = call_gemini_lite(system_prompt=system, user_message=user, max_tokens=4096)
     return parse_json_object(text)
 
 
@@ -110,6 +92,7 @@ def auditor_node(state: AgentState) -> AgentState:
         violations_found=len(violations),
         audit_passed=state.get("audit_passed", False),
         files_scanned=len(code_files),
+        model=GEMINI_FLASH_LITE,
     ):
         if not violations:
             state["audit_report"] = {"regex_violations": [], "llm_review": None}

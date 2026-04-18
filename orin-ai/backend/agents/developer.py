@@ -2,27 +2,16 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import logfire
-from anthropic import Anthropic
-from dotenv import load_dotenv
-from openai import OpenAI
 
-from llm_json import parse_json_object, strip_code_fences
+from llm_clients import call_gemini, call_gemini_lite, call_groq, GEMINI_FLASH, GEMINI_FLASH_LITE, GROQ_LLAMA  # noqa: F401
+from llm_json import parse_json_object
 from state import AgentState, TestRun, build_agent_context, get_developer_prompt_mode
 from tools.e2b_tools import run_code_in_sandbox
-from utils.logfire_helpers import log_anthropic_usage, log_chat_completion_usage
-
-load_dotenv()
 
 _PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
-_CLAUDE_MODEL = "claude-sonnet-4-20250514"
-_OPENAI_MODEL = "gpt-4o"
-
-_anthropic = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
-_openai = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
 
 
 def _load_prompt_file(name: str) -> str:
@@ -78,35 +67,8 @@ def generate_code(state: AgentState) -> dict[str, str]:
             "No markdown fences."
         )
 
-    def _claude() -> dict[str, str]:
-        msg = _anthropic.messages.create(
-            model=_CLAUDE_MODEL,
-            max_tokens=16384,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-        log_anthropic_usage("developer", _CLAUDE_MODEL, msg)
-        text = ""
-        for block in msg.content:
-            if hasattr(block, "text"):
-                text += block.text
-        return parse_json_object(text)
-
-    try:
-        files = _claude()
-    except Exception as e:
-        print(f"[developer] Claude failed ({e!r}); falling back to OpenAI {_OPENAI_MODEL}")
-        completion = _openai.chat.completions.create(
-            model=_OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            temperature=0.2,
-        )
-        log_chat_completion_usage("developer", _OPENAI_MODEL, completion)
-        text = completion.choices[0].message.content or ""
-        files = parse_json_object(strip_code_fences(text))
+    text = call_gemini(system_prompt=system, user_message=user, max_tokens=16384)
+    files = parse_json_object(text)
 
     if mode != "panic":
         for k in ("app.py", "requirements.txt", "test_app.py"):
@@ -134,6 +96,7 @@ def developer_node(state: AgentState) -> AgentState:
         iteration=state["iteration_count"],
         mode=state["mode"],
         task_id=state["current_task_id"],
+        model=GEMINI_FLASH,
     ):
         patch = generate_code(state)
         code_files = {**state.get("code_files", {}), **patch}

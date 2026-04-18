@@ -1,21 +1,12 @@
-"""Architect agent — technical architecture (Claude Sonnet)."""
+"""Architect agent — technical architecture (Gemini Flash)."""
 
 from __future__ import annotations
 
-import os
-
 import logfire
-from anthropic import Anthropic
-from dotenv import load_dotenv
 
+from llm_clients import call_gemini, call_gemini_lite, call_groq, GEMINI_FLASH, GEMINI_FLASH_LITE, GROQ_LLAMA  # noqa: F401
 from llm_json import parse_json_object
 from state import AgentState, Architecture
-from utils.logfire_helpers import log_anthropic_usage
-
-load_dotenv()
-
-_MODEL = "claude-sonnet-4-20250514"
-_client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
 
 
 def generate_architecture(state: AgentState) -> Architecture:
@@ -34,18 +25,7 @@ def generate_architecture(state: AgentState) -> Architecture:
             ),
         ]
     )
-    msg = _client.messages.create(
-        model=_MODEL,
-        max_tokens=16384,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    log_anthropic_usage("architect", _MODEL, msg)
-    text = ""
-    for block in msg.content:
-        if hasattr(block, "text"):
-            text += block.text
-
+    text = call_gemini(system_prompt=system, user_message=user, max_tokens=16384)
     data = parse_json_object(text)
     arch = Architecture(
         docker_compose=str(data.get("docker_compose", "")).strip(),
@@ -65,6 +45,6 @@ def generate_architecture(state: AgentState) -> Architecture:
 
 
 def architect_node(state: AgentState) -> AgentState:
-    with logfire.span("architect_agent", goal=state["goal"][:50]):
+    with logfire.span("architect_agent", goal=state["goal"][:50], model=GEMINI_FLASH):
         state["architecture"] = generate_architecture(state)
     return state

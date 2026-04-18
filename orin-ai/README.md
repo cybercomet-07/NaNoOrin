@@ -13,10 +13,10 @@
 ```
 User Prompt
   → Market Research (Tavily + Groq)
-  → User Personas (Groq)
-  → Architecture Design (Claude claude-sonnet-4)
-  → Code Generation + Test Loop (Claude + E2B sandbox)
-  → Security Audit (Claude Haiku)
+  → User Personas (Gemini Flash-Lite)
+  → Architecture Design (Gemini Flash)
+  → Code Generation + Test Loop (Gemini Flash + E2B sandbox)
+  → Security Audit (regex + Gemini Flash-Lite)
   → Fully tested, audited MVP
 ```
 
@@ -26,23 +26,24 @@ User Prompt
 
 | Phase | Name | Agents |
 |---|---|---|
-| 1 | Scout Swarm | Researcher + Persona (parallel fan-out) |
+| 1 | Parallel discovery | Researcher + Persona (parallel fan-out) |
 | 2 | Blueprint | Architect |
 | 3 | Production Loop | Developer → Critic → (retry or pass) |
 | 4 | Security Gate | Auditor → FINALIZED or re-route |
 
 ---
 
-## The Six Agents
+## The Seven Agents
 
 | Agent | Model | Role | Key Tool |
 |---|---|---|---|
-| Supervisor | Claude claude-sonnet-4 | Orchestrates TaskGraph | LangGraph routing |
-| Researcher | Groq Llama 3 70B | Competitor + market analysis | Tavily search |
-| Persona | Groq Llama 3 70B | User persona generation | Groq LLM |
-| Architect | Claude claude-sonnet-4 | Docker, DB schema, API spec | Claude LLM |
-| Developer | Claude claude-sonnet-4 | Writes + fixes code | E2B sandbox |
-| Auditor | Claude Haiku | Security scan | Regex + Claude Haiku |
+| Supervisor | Gemini Flash | Orchestrates TaskGraph | LangGraph routing |
+| Researcher | Groq Llama 3.3 70B | Competitor + market analysis | Tavily search |
+| Persona | Gemini Flash-Lite | User persona generation | Gemini API |
+| Architect | Gemini Flash | Docker, DB schema, API spec | Gemini API |
+| Developer | Gemini Flash | Writes + fixes code | E2B sandbox |
+| Critic | — (heuristics) | Pass/fail on test output | Test stdout/stderr |
+| Auditor | Gemini Flash-Lite | Security scan | Regex + Gemini API |
 
 ---
 
@@ -69,8 +70,8 @@ The signature demo moment:
 | Code Sandbox | E2B Code Interpreter |
 | Search | Tavily |
 | Observability | Logfire |
-| LLM (fast) | Groq Llama 3 70B |
-| LLM (quality) | Anthropic Claude claude-sonnet-4 |
+| LLM (fast) | Groq Llama 3.3 70B (researcher) |
+| LLM (quality) | Google Gemini Flash / Flash-Lite (OpenAI-compatible API) |
 | Frontend | Next.js 14 |
 
 ---
@@ -78,11 +79,9 @@ The signature demo moment:
 ## Setup
 
 ```bash
-git clone https://github.com/cybercomet-07/NaNoOrin
-cd NaNoOrin/swarm-os
-
-cp .env.example .env
-# Fill in all API keys in .env
+cd orin-ai
+cp .env.example backend/.env
+# Fill in all API keys in backend/.env
 
 cd backend
 pip install -r requirements.txt

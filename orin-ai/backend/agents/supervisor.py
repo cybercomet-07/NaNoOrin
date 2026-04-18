@@ -3,23 +3,15 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import logfire
-from anthropic import Anthropic
-from dotenv import load_dotenv
 
+from llm_clients import call_gemini, call_gemini_lite, call_groq, GEMINI_FLASH, GEMINI_FLASH_LITE, GROQ_LLAMA  # noqa: F401
 from llm_json import parse_json_array
 from state import AgentState, Task, build_agent_context
-from utils.logfire_helpers import log_anthropic_usage
-
-load_dotenv()
 
 _PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
-_SUPERVISOR_MODEL = "claude-sonnet-4-20250514"
-
-_client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
 
 
 def _load_supervisor_prompt() -> str:
@@ -109,18 +101,7 @@ def generate_task_graph(state: AgentState) -> list[Task]:
 
     user_message = "\n\n".join(user_parts)
 
-    msg = _client.messages.create(
-        model=_SUPERVISOR_MODEL,
-        max_tokens=8192,
-        system=system,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    log_anthropic_usage("supervisor", _SUPERVISOR_MODEL, msg)
-    text = ""
-    for block in msg.content:
-        if hasattr(block, "text"):
-            text += block.text
-
+    text = call_gemini(system_prompt=system, user_message=user_message, max_tokens=8192)
     rows = parse_json_array(text)
     tasks = _tasks_from_payload(rows)
     _validate_task_graph(tasks)
@@ -144,22 +125,12 @@ def generate_correction_directive(state: AgentState) -> str:
             "Return a single Correction Directive paragraph (plain text, no JSON).",
         ]
     )
-    msg = _client.messages.create(
-        model=_SUPERVISOR_MODEL,
-        max_tokens=2048,
-        system=system,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    log_anthropic_usage("supervisor", _SUPERVISOR_MODEL, msg)
-    out = ""
-    for block in msg.content:
-        if hasattr(block, "text"):
-            out += block.text
+    out = call_gemini(system_prompt=system, user_message=user_message, max_tokens=2048)
     return out.strip()
 
 
 def supervisor_node(state: AgentState) -> AgentState:
-    with logfire.span("supervisor_agent", goal_preview=state["goal"][:100]):
+    with logfire.span("supervisor_agent", goal_preview=state["goal"][:100], model=GEMINI_FLASH):
         try:
             tasks = generate_task_graph(state)
         except Exception as e:

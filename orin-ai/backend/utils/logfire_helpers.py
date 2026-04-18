@@ -25,16 +25,6 @@ def log_llm_call(
     )
 
 
-def log_anthropic_usage(agent_name: str, model: str, msg: object) -> None:
-    """Log usage from anthropic.messages.create() response."""
-    u = getattr(msg, "usage", None)
-    if not u:
-        return
-    inp = int(getattr(u, "input_tokens", None) or 0)
-    out = int(getattr(u, "output_tokens", None) or 0)
-    log_llm_call(agent_name, model, inp, out)
-
-
 def log_chat_completion_usage(agent_name: str, model: str, completion: object) -> None:
     """Log usage from OpenAI / Groq chat.completions.create() response."""
     u = getattr(completion, "usage", None)
