@@ -6,11 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Download, Globe, Code, FileText, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-
 export default function ReportPage() {
   const [showWebsiteModal, setShowWebsiteModal] = useState(false);
-  const router = useRouter();
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-8 pb-12">
