@@ -215,5 +215,27 @@ def search_technology(query: str) -> list[dict[str, str]]:
     return out
 
 
+def validate_tavily_connection() -> bool:
+    """
+    Lightweight Tavily API check for GET /health.
+    Returns True if the key is set and a minimal search succeeds.
+    """
+    key = os.getenv("TAVILY_API_KEY")
+    if not key:
+        return False
+    try:
+        client = TavilyClient(api_key=key)
+        client.search(
+            "health check",
+            max_results=1,
+            search_depth="basic",
+            timeout=15.0,
+        )
+        return True
+    except Exception as exc:
+        print(f"[tavily_tools] validate_tavily_connection: {exc!r}")
+        return False
+
+
 if __name__ == "__main__":
     print(search_competitors("task management app"))

@@ -31,9 +31,10 @@ from sse_starlette.sse import EventSourceResponse
 from state import get_initial_state
 
 # ---------------------------------------------------------------------------
-# Phase 2 — E2B health check (COMPLETE)
+# Phase 2 — E2B + Tavily health checks (COMPLETE)
 # ---------------------------------------------------------------------------
 from tools.e2b_tools import validate_e2b_connection
+from tools.tavily_tools import validate_tavily_connection
 
 # ---------------------------------------------------------------------------
 # Phase 4 — compiled LangGraph pipeline (COMPLETE)
@@ -191,20 +192,23 @@ async def trace(run_id: str):
 @app.get("/health")
 async def health():
     """
-    Checks E2B sandbox connectivity (Phase 2) and graph readiness (Phase 4).
-    validate_e2b_connection() is synchronous so we run it in a thread pool
-    to avoid blocking the async event loop.
+    Orin plan: {"status": "ok", "e2b": bool, "tavily": bool}.
+    Sandbox + Tavily clients are synchronous — run in a thread pool.
     """
     loop = asyncio.get_event_loop()
     try:
         e2b_ok: bool = await loop.run_in_executor(None, validate_e2b_connection)
     except Exception:
         e2b_ok = False
+    try:
+        tavily_ok: bool = await loop.run_in_executor(None, validate_tavily_connection)
+    except Exception:
+        tavily_ok = False
 
     return {
         "status": "ok",
         "e2b": e2b_ok,
-        "graph_ready": True,   # graph imported at module level — if server started, graph is ready
+        "tavily": tavily_ok,
     }
 
 
