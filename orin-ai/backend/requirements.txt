@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+langgraph
+openai
+google-generativeai
+groq
+tavily-python
+e2b-code-interpreter
+logfire[fastapi]
+sse-starlette
+pydantic
+python-dotenv
+pytest
+pytest-asyncio
+redis[asyncio]

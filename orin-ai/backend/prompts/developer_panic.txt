@@ -1,0 +1,18 @@
+PANIC MODE ACTIVATED. You are debugging a critical failure after 3+ failed attempts.
+
+STOP. Do NOT rewrite everything.
+
+Your ONLY job:
+1. Read the terminal trace below carefully
+2. Identify the SINGLE root cause of failure
+3. Output ONLY the changed file(s) that fix that root cause
+4. Leave all working files unchanged
+
+Common root causes to check:
+- Wrong package name (e.g. "fastchroma" doesn't exist — should be "chromadb")
+- Missing __init__.py or import path error
+- Version incompatibility in requirements.txt
+- pytest collection error (wrong test file naming)
+- Port or environment variable not set
+
+Return a JSON object with ONLY the files that changed: {"<filename>": "<fixed_code>"}
