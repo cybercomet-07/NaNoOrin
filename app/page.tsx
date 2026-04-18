@@ -96,34 +96,34 @@ export default function LandingPage() {
                 OrinAI v2.0 is live
               </div>
               
-              <div className="flex flex-col gap-0">
+              <div className="flex flex-col gap-2">
                 <ScrollFloat
-                  animationDuration={0.7}
+                  animationDuration={1.2}
                   stagger={0.03}
                   containerClassName="text-5xl md:text-7xl font-extrabold tracking-tight text-white m-0"
                   textClassName="text-white"
-                  scrollStart="top 90%"
-                  scrollEnd="top 10%"
+                  scrollStart="top 95%"
+                  scrollEnd="top 20%"
                 >
                   One Prompt.
                 </ScrollFloat>
                 <ScrollFloat
-                  animationDuration={0.8}
+                  animationDuration={1.2}
                   stagger={0.02}
                   containerClassName="text-5xl md:text-7xl font-extrabold tracking-tight m-0"
                   textClassName="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary"
-                  scrollStart="top 85%"
-                  scrollEnd="top 15%"
+                  scrollStart="top 90%"
+                  scrollEnd="top 25%"
                 >
                   No Human in the Loop.
                 </ScrollFloat>
                 <ScrollFloat
-                  animationDuration={0.9}
+                  animationDuration={1.2}
                   stagger={0.03}
                   containerClassName="text-5xl md:text-7xl font-extrabold tracking-tight text-white m-0"
                   textClassName="text-white"
-                  scrollStart="top 80%"
-                  scrollEnd="top 20%"
+                  scrollStart="top 85%"
+                  scrollEnd="top 30%"
                 >
                   Working Code.
                 </ScrollFloat>
@@ -238,12 +238,19 @@ export default function LandingPage() {
             >
               Complete Intelligence
             </ScrollFloat>
-            <p className="text-muted max-w-2xl mx-auto text-lg">
+            <p className="text-muted max-w-2xl mx-auto text-lg text-center">
               End-to-end automation from raw idea to deployed infrastructure.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <ScrollFloat 
+            mode="elements" 
+            stagger={0.15}
+            animationDuration={1}
+            containerClassName="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+            scrollStart="top 85%"
+            scrollEnd="top 30%"
+          >
             {[
               { title: "Market Research", icon: LineChart, desc: "Instant viable analysis of competitors, TAM, and target demographics." },
               { title: "AI Personas", icon: Bot, desc: "Synthesized synthetic users to battle-test your product before launch." },
@@ -252,26 +259,17 @@ export default function LandingPage() {
               { title: "Security Audit", icon: ShieldCheck, desc: "Sentinel agents review code for vulnerabilities and performance bottlenecks." },
               { title: "Website Generator", icon: Zap, desc: "Instantly deploy a beautiful landing page with our dynamic templates." },
             ].map((feature, i) => (
-              <Card key={i} className="bg-surface/50 hover:bg-surface border-white/5 hover:border-primary/30 transition-all group overflow-hidden">
+              <Card key={i} className="bg-surface/50 hover:bg-surface border-white/5 hover:border-primary/30 transition-all group overflow-hidden h-full">
                 <CardHeader>
                   <feature.icon className="h-10 w-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
-                  <ScrollFloat
-                    animationDuration={0.6}
-                    stagger={0.02}
-                    containerClassName="text-xl font-semibold text-white m-0"
-                    textClassName="text-white"
-                    scrollStart="top 95%"
-                    scrollEnd="top 30%"
-                  >
-                    {feature.title}
-                  </ScrollFloat>
+                  <CardTitle>{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-sm">{feature.desc}</CardDescription>
                 </CardContent>
               </Card>
             ))}
-          </div>
+          </ScrollFloat>
         </section>
 
         {/* AI AGENTS SHOWCASE */}
@@ -291,7 +289,16 @@ export default function LandingPage() {
               <p className="text-muted text-lg mb-8">
                 Six specialized AI agents working synchronously to transform your text prompt into a living business.
               </p>
-              <ul className="space-y-4">
+              
+              <ScrollFloat
+                mode="elements"
+                stagger={0.1}
+                animationDuration={0.8}
+                containerClassName="space-y-4"
+                scrollStart="top 90%"
+                scrollEnd="top 40%"
+                as="ul"
+              >
                 {[
                   { name: "SCOUT", role: "Market Analyst" },
                   { name: "PERSONA", role: "UX / Simulator" },
@@ -305,10 +312,16 @@ export default function LandingPage() {
                     <span className="text-white/60 text-sm">— {agent.role}</span>
                   </li>
                 ))}
-              </ul>
+              </ScrollFloat>
             </div>
-            <div className="flex-1 relative aspect-square max-w-md mx-auto">
-              {/* Visual representation of agents connected */}
+            {/* Visual representation of agents connected */}
+            <ScrollFloat 
+              mode="elements"
+              animationDuration={1.5}
+              scrollStart="top 80%"
+              scrollEnd="top 20%"
+              containerClassName="flex-1 relative aspect-square max-w-md mx-auto"
+            >
               <div className="absolute inset-0 rounded-full border border-white/10 animate-[spin_60s_linear_infinite]" />
               <div className="absolute inset-4 rounded-full border border-primary/20 animate-[spin_40s_linear_infinite_reverse]" />
               <div className="absolute inset-8 rounded-full border border-secondary/20 animate-[spin_20s_linear_infinite]" />
@@ -317,7 +330,7 @@ export default function LandingPage() {
                   <Logo />
                 </div>
               </div>
-            </div>
+            </ScrollFloat>
           </div>
         </section>
 
@@ -334,10 +347,17 @@ export default function LandingPage() {
             >
               Pricing
             </ScrollFloat>
-            <p className="text-muted">Simple scalable plans for absolute power.</p>
+            <p className="text-muted text-center">Simple scalable plans for absolute power.</p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <ScrollFloat 
+            mode="elements"
+            stagger={0.2}
+            animationDuration={1}
+            containerClassName="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+            scrollStart="top 85%"
+            scrollEnd="top 30%"
+          >
             {/* Free */}
             <Card className="bg-surface border-white/10 overflow-hidden">
               <CardHeader>
@@ -389,7 +409,7 @@ export default function LandingPage() {
                 <Button variant="outline" className="w-full mt-6">Contact Sales</Button>
               </CardContent>
             </Card>
-          </div>
+          </ScrollFloat>
         </section>
 
         {/* FINAL CTA / 1-STOP SOLUTION */}
@@ -397,14 +417,20 @@ export default function LandingPage() {
           <div className="bg-gradient-to-tr from-surface to-background border border-primary/20 rounded-3xl p-12 text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
             
-            <div className="relative z-10">
+            <ScrollFloat 
+              mode="elements"
+              animationDuration={1.2}
+              containerClassName="relative z-10"
+              scrollStart="top 95%"
+              scrollEnd="top 30%"
+            >
               <ScrollFloat
                 animationDuration={0.8}
                 stagger={0.03}
                 containerClassName="text-3xl md:text-5xl font-bold text-white mb-6 flex justify-center"
                 textClassName="text-white"
-                scrollStart="top 95%"
-                scrollEnd="top 30%"
+                scrollStart="top 120%"
+                scrollEnd="top 20%"
               >
                 OrinAI: 1-Stop Solution
               </ScrollFloat>
@@ -414,7 +440,7 @@ export default function LandingPage() {
               <Button size="lg" className="h-14 px-10 text-lg font-bold">
                 Start Building Now
               </Button>
-            </div>
+            </ScrollFloat>
           </div>
         </section>
 
