@@ -7,11 +7,13 @@ from pathlib import Path
 
 import logfire
 
-from llm_clients import call_gemini, call_gemini_lite, call_groq, GEMINI_FLASH, GEMINI_FLASH_LITE, GROQ_LLAMA  # noqa: F401
+from llm_clients import call_agent_llm
 from llm_json import parse_json_array
 from state import AgentState, Task, build_agent_context
 
 _PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
+
+_GEMINI_FLASH = "gemini-2.5-flash-preview-05-20"
 
 
 def _load_supervisor_prompt() -> str:
@@ -101,8 +103,8 @@ def generate_task_graph(state: AgentState) -> list[Task]:
 
     user_message = "\n\n".join(user_parts)
 
-    text = call_gemini(system_prompt=system, user_message=user_message, max_tokens=8192)
-    rows = parse_json_array(text)
+    text = call_agent_llm("supervisor", system, user_message, max_tokens=8192)
+    rows = parse_json_array(text or "")
     tasks = _tasks_from_payload(rows)
     _validate_task_graph(tasks)
     return tasks
@@ -125,12 +127,12 @@ def generate_correction_directive(state: AgentState) -> str:
             "Return a single Correction Directive paragraph (plain text, no JSON).",
         ]
     )
-    out = call_gemini(system_prompt=system, user_message=user_message, max_tokens=2048)
-    return out.strip()
+    out = call_agent_llm("supervisor", system, user_message, max_tokens=2048)
+    return (out or "").strip()
 
 
 def supervisor_node(state: AgentState) -> AgentState:
-    with logfire.span("supervisor_agent", goal_preview=state["goal"][:100], model=GEMINI_FLASH):
+    with logfire.span("supervisor_agent", goal_preview=state["goal"][:100], model=_GEMINI_FLASH):
         try:
             tasks = generate_task_graph(state)
         except Exception as e:

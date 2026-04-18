@@ -29,8 +29,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from llm_clients import gemini_client, groq_client  # noqa: F401 — ensures env vars loaded
-
 # ---------------------------------------------------------------------------
 # Phase 8.2 — fail fast on missing keys / broken E2B (set ORIN_SKIP_STARTUP_VALIDATION=1 to skip)
 # ---------------------------------------------------------------------------
@@ -126,6 +124,14 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 logfire.instrument_fastapi(app)
+
+from llm_clients import validate_all_keys
+
+
+@app.on_event("startup")
+async def startup_event():
+    validate_all_keys()
+
 
 # ---------------------------------------------------------------------------
 # Request model

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import logfire
 
-from llm_clients import call_gemini, call_gemini_lite, call_groq, GEMINI_FLASH, GEMINI_FLASH_LITE, GROQ_LLAMA  # noqa: F401
+from llm_clients import call_agent_llm
 from llm_json import strip_code_fences
 from state import AgentState
+
+_GEMINI_FLASH_LITE = "gemini-2.5-flash-lite-preview-06-17"
 
 
 def generate_personas(state: AgentState) -> tuple[str, str]:
@@ -18,10 +20,10 @@ def generate_personas(state: AgentState) -> tuple[str, str]:
     ctx = state.get("research_output") or "Not yet available"
     user = f"Product goal: {state['goal']}\n\nMarket research context:\n{ctx}"
 
-    text = call_gemini_lite(system_prompt=system, user_message=user)
-    out = strip_code_fences(text).strip()
-    print(f"[persona] used model: {GEMINI_FLASH_LITE}")
-    return out, GEMINI_FLASH_LITE
+    text = call_agent_llm("persona", system, user)
+    out = strip_code_fences(text or "").strip()
+    print(f"[persona] used model: {_GEMINI_FLASH_LITE}")
+    return out, _GEMINI_FLASH_LITE
 
 
 def persona_node(state: AgentState) -> AgentState:

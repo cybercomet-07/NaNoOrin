@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import logfire
 
-from llm_clients import call_gemini, call_gemini_lite, call_groq, GEMINI_FLASH, GEMINI_FLASH_LITE, GROQ_LLAMA  # noqa: F401
+from llm_clients import call_agent_llm
 from llm_json import parse_json_object
 from state import AgentState, Architecture
+
+_GEMINI_FLASH = "gemini-2.5-flash-preview-05-20"
 
 
 def generate_architecture(state: AgentState) -> Architecture:
@@ -25,8 +27,8 @@ def generate_architecture(state: AgentState) -> Architecture:
             ),
         ]
     )
-    text = call_gemini(system_prompt=system, user_message=user, max_tokens=16384)
-    data = parse_json_object(text)
+    text = call_agent_llm("architect", system, user, max_tokens=16384)
+    data = parse_json_object(text or "")
     arch = Architecture(
         docker_compose=str(data.get("docker_compose", "")).strip(),
         db_schema=str(data.get("db_schema", "")).strip(),
@@ -45,6 +47,6 @@ def generate_architecture(state: AgentState) -> Architecture:
 
 
 def architect_node(state: AgentState) -> AgentState:
-    with logfire.span("architect_agent", goal=state["goal"][:50], model=GEMINI_FLASH):
+    with logfire.span("architect_agent", goal=state["goal"][:50], model=_GEMINI_FLASH):
         state["architecture"] = generate_architecture(state)
     return state

@@ -8,9 +8,11 @@ from typing import Any
 
 import logfire
 
-from llm_clients import call_gemini, call_gemini_lite, call_groq, GEMINI_FLASH, GEMINI_FLASH_LITE, GROQ_LLAMA  # noqa: F401
+from llm_clients import call_agent_llm
 from llm_json import parse_json_object
 from state import AgentState
+
+_GEMINI_FLASH_LITE = "gemini-2.5-flash-lite-preview-06-17"
 
 _SECRET_RE = re.compile(r"[A-Za-z0-9]{32,}")
 _SQL_FSTRING = re.compile(r'f["\'][\s\S]*?SELECT', re.IGNORECASE)
@@ -79,8 +81,8 @@ def llm_security_review(code_files: dict[str, str], regex_violations: list) -> d
         f"Regex findings (may include false positives):\n{json.dumps(regex_violations, indent=2)[:8000]}\n\n"
         f"Code:\n{bundle[:100000]}"
     )
-    text = call_gemini_lite(system_prompt=system, user_message=user, max_tokens=4096)
-    return parse_json_object(text)
+    text = call_agent_llm("auditor", system, user, max_tokens=4096)
+    return parse_json_object(text or "")
 
 
 def auditor_node(state: AgentState) -> AgentState:
@@ -92,7 +94,7 @@ def auditor_node(state: AgentState) -> AgentState:
         violations_found=len(violations),
         audit_passed=state.get("audit_passed", False),
         files_scanned=len(code_files),
-        model=GEMINI_FLASH_LITE,
+        model=_GEMINI_FLASH_LITE,
     ):
         if not violations:
             state["audit_report"] = {"regex_violations": [], "llm_review": None}

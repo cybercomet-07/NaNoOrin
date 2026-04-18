@@ -6,12 +6,14 @@ from pathlib import Path
 
 import logfire
 
-from llm_clients import call_gemini, call_gemini_lite, call_groq, GEMINI_FLASH, GEMINI_FLASH_LITE, GROQ_LLAMA  # noqa: F401
+from llm_clients import call_agent_llm
 from llm_json import parse_json_object
 from state import AgentState, TestRun, build_agent_context, get_developer_prompt_mode
 from tools.e2b_tools import run_code_in_sandbox
 
 _PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
+
+_GEMINI_FLASH = "gemini-2.5-flash-preview-05-20"
 
 
 def _load_prompt_file(name: str) -> str:
@@ -67,8 +69,8 @@ def generate_code(state: AgentState) -> dict[str, str]:
             "No markdown fences."
         )
 
-    text = call_gemini(system_prompt=system, user_message=user, max_tokens=16384)
-    files = parse_json_object(text)
+    text = call_agent_llm("developer", system, user, max_tokens=16384)
+    files = parse_json_object(text or "")
 
     if mode != "panic":
         for k in ("app.py", "requirements.txt", "test_app.py"):
@@ -96,7 +98,7 @@ def developer_node(state: AgentState) -> AgentState:
         iteration=state["iteration_count"],
         mode=state["mode"],
         task_id=state["current_task_id"],
-        model=GEMINI_FLASH,
+        model=_GEMINI_FLASH,
     ):
         patch = generate_code(state)
         code_files = {**state.get("code_files", {}), **patch}
