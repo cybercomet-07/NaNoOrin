@@ -1,8 +1,7 @@
-# TODO: Phase 1 — Full AgentState schema + helper functions
-# Reference: execution_plan.md PROMPT 1.1
+"""AgentState — single source of truth for the Orin AI pipeline."""
 
-from typing import TypedDict, Literal, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Literal, Optional, TypedDict
 
 
 @dataclass
@@ -18,8 +17,8 @@ class Task:
 @dataclass
 class Architecture:
     docker_compose: str
-    db_schema: str        # SQLAlchemy models as string
-    api_spec: str         # OpenAPI YAML as string
+    db_schema: str  # SQLAlchemy models as string
+    api_spec: str  # OpenAPI YAML as string
     tech_rationale: str
 
 
@@ -43,15 +42,15 @@ class AgentState(TypedDict):
     mode: str  # "normal" | "panic"
 
     # Phase 1 outputs
-    research_output: Optional[str]   # competitor analysis JSON
-    personas: Optional[str]          # user personas JSON
+    research_output: Optional[str]  # competitor analysis JSON
+    personas: Optional[str]  # user personas JSON
 
     # Phase 2 outputs
     architecture: Optional[Architecture]
 
     # Phase 3 outputs
-    code_files: dict[str, str]       # {filename: code_string}
-    test_results: list[TestRun]      # all test runs including failures
+    code_files: dict[str, str]  # {filename: code_string}
+    test_results: list[TestRun]  # all test runs including failures
 
     # Phase 4 outputs
     audit_report: Optional[dict]
@@ -65,7 +64,6 @@ class AgentState(TypedDict):
 
 def get_initial_state(goal: str) -> AgentState:
     """Returns a fresh AgentState for a new pipeline run."""
-    # TODO: Phase 1 — implement fully per PROMPT 1.1
     return AgentState(
         goal=goal,
         task_graph=[],
@@ -81,21 +79,38 @@ def get_initial_state(goal: str) -> AgentState:
         audit_passed=False,
         status="RUNNING",
         error_log=[],
-        messages=[]
+        messages=[],
     )
 
 
 def build_agent_context(state: AgentState) -> str:
     """
-    Always call this before any LLM invocation.
+    CRITICAL: Always call this before any LLM invocation.
     Injects exactly the right context — no more, no less.
     Truncates to prevent context window overflow.
-    TODO: Phase 1 — implement fully per PROMPT 1.1
     """
-    pass
+    context_parts = [
+        f"=== ORIGINAL GOAL ===\n{state['goal']}",
+        f"=== CURRENT TASK ===\n{state.get('current_task_id', 'none')}",
+    ]
+
+    recent_failures = [t for t in state["test_results"] if not t.passed][-2:]
+    if recent_failures:
+        context_parts.append("=== PREVIOUS FAILURES (diagnose these) ===")
+        for tf in recent_failures:
+            context_parts.append(
+                f"Iteration {tf.iteration}:\nSTDOUT: {tf.stdout[:300]}\nSTDERR: {tf.stderr[:500]}"
+            )
+
+    if state.get("architecture"):
+        arch = state["architecture"]
+        context_parts.append(f"=== ARCHITECTURE SPEC ===\n{arch.api_spec}")
+
+    return "\n\n".join(context_parts)
 
 
 def get_developer_prompt_mode(state: AgentState) -> str:
     """Returns 'panic' or 'normal' based on iteration count and mode."""
-    # TODO: Phase 1 — implement fully per PROMPT 1.1
-    pass
+    if state["iteration_count"] >= 3 or state["mode"] == "panic":
+        return "panic"
+    return "normal"
