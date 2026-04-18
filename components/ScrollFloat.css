@@ -1,0 +1,15 @@
+.scroll-float {
+  overflow: hidden;
+  line-height: 1.1;
+}
+
+.scroll-float-text {
+  display: inline-block;
+  /* Font size is handled by Tailwind classes passed to the component */
+  text-align: left;
+}
+
+.char {
+  display: inline-block;
+  will-change: opacity, transform;
+}

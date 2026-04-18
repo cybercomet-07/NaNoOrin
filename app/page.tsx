@@ -16,6 +16,8 @@ const EXAMPLE_PROMPTS = [
   "Build a real-time chat API with WebSockets, user rooms, and message history",
 ];
 
+import ScrollFloat from "@/components/ScrollFloat";
+
 export default function LandingPage() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -94,13 +96,38 @@ export default function LandingPage() {
                 OrinAI v2.0 is live
               </div>
               
-              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight">
-                One Prompt. <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
+              <div className="flex flex-col gap-0">
+                <ScrollFloat
+                  animationDuration={0.7}
+                  stagger={0.03}
+                  containerClassName="text-5xl md:text-7xl font-extrabold tracking-tight text-white m-0"
+                  textClassName="text-white"
+                  scrollStart="top 90%"
+                  scrollEnd="top 10%"
+                >
+                  One Prompt.
+                </ScrollFloat>
+                <ScrollFloat
+                  animationDuration={0.8}
+                  stagger={0.02}
+                  containerClassName="text-5xl md:text-7xl font-extrabold tracking-tight m-0"
+                  textClassName="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary"
+                  scrollStart="top 85%"
+                  scrollEnd="top 15%"
+                >
                   No Human in the Loop.
-                </span> <br />
-                Working Code.
-              </h1>
+                </ScrollFloat>
+                <ScrollFloat
+                  animationDuration={0.9}
+                  stagger={0.03}
+                  containerClassName="text-5xl md:text-7xl font-extrabold tracking-tight text-white m-0"
+                  textClassName="text-white"
+                  scrollStart="top 80%"
+                  scrollEnd="top 20%"
+                >
+                  Working Code.
+                </ScrollFloat>
+              </div>
               
               <p className="text-lg md:text-xl text-muted max-w-xl">
                 OrinAI deploys intelligent AI agents that research, architect, code, test, and audit your entire project — autonomously.
