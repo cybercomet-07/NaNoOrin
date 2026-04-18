@@ -27,7 +27,7 @@ async def warmup() -> None:
     from graph import graph
     from state import get_initial_state
 
-    print("🔥 Orin AI Demo Warm-Up\n")
+    print("=== Orin AI Demo Warm-Up ===\n")
 
     for i, prompt in enumerate(DEMO_PROMPTS):
         print(f"Running test {i + 1}/{len(DEMO_PROMPTS)}: {prompt[:60]}...")
@@ -49,9 +49,9 @@ async def warmup() -> None:
         print(f"  Time: {elapsed:.1f}s")
 
         if status == "FINALIZED":
-            print("  ✅ READY FOR DEMO\n")
+            print("  [OK] READY FOR DEMO\n")
         else:
-            print(f"  ❌ DEMO AT RISK — Errors: {result['error_log']}\n")
+            print(f"  [FAIL] DEMO AT RISK - Errors: {result['error_log']}\n")
 
     print("Warm-up complete. Open Logfire dashboard now.")
     print("Bookmark your trace URLs before going on stage.")

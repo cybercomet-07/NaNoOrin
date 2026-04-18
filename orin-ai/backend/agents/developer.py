@@ -13,8 +13,6 @@ from tools.e2b_tools import run_code_in_sandbox
 
 _PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
 
-_GEMINI_FLASH = "gemini-2.5-flash-preview-05-20"
-
 
 def _load_prompt_file(name: str) -> str:
     return (_PROMPTS / name).read_text(encoding="utf-8")
@@ -123,7 +121,6 @@ def developer_node(state: AgentState) -> AgentState:
         iteration=state["iteration_count"],
         mode=state["mode"],
         task_id=state["current_task_id"],
-        model=_GEMINI_FLASH,
     ):
         patch, user_message = generate_code(state, correction_directive=correction_directive)
         code_files = {**state.get("code_files", {}), **patch}

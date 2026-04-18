@@ -13,8 +13,6 @@ from state import AgentState, Task, build_agent_context
 
 _PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
 
-_GEMINI_FLASH = "gemini-2.5-flash-preview-05-20"
-
 
 def _load_supervisor_prompt() -> str:
     return (_PROMPTS / "supervisor.txt").read_text(encoding="utf-8")
@@ -130,7 +128,7 @@ def generate_correction_directive(state: AgentState) -> str:
 
 
 def supervisor_node(state: AgentState) -> AgentState:
-    with logfire.span("supervisor_agent", goal_preview=state["goal"][:100], model=_GEMINI_FLASH):
+    with logfire.span("supervisor_agent", goal_preview=state["goal"][:100]):
         try:
             tasks, user_message = generate_task_graph(state)
             task_json = json.dumps([t.__dict__ for t in tasks], default=str)

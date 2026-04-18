@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sys
 import uuid
 from contextlib import asynccontextmanager
 from typing import Literal, cast
@@ -109,9 +110,11 @@ async def lifespan(app: FastAPI):
     try:
         _redis = aioredis.from_url(redis_url, decode_responses=True)
         await _redis.ping()
-        print(f"✅ Redis connected: {redis_url}")
+        sys.stdout.buffer.write(f"[OK] Redis connected: {redis_url}\n".encode("utf-8"))
+        sys.stdout.buffer.flush()
     except Exception as exc:
-        print(f"⚠️  Redis unavailable ({exc}). Run state will not persist across restarts.")
+        sys.stdout.buffer.write(f"[WARN] Redis unavailable ({exc}). Run state will not persist across restarts.\n".encode("utf-8"))
+        sys.stdout.buffer.flush()
         _redis = None
     yield
     if _redis:

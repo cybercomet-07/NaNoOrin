@@ -6,12 +6,10 @@ import json
 
 import logfire
 
-from llm_clients import call_agent_llm
+from llm_clients import GROQ_LLAMA, call_agent_llm
 from llm_json import strip_code_fences
 from state import AgentState
 from tools.tavily_tools import search_competitors
-
-_GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 def run_market_research(state: AgentState) -> tuple[str, str, str]:
@@ -26,11 +24,11 @@ def run_market_research(state: AgentState) -> tuple[str, str, str]:
     )
     text = call_agent_llm("researcher", system, user, max_tokens=2048, temperature=0.2)
     out = strip_code_fences(text or "").strip()
-    return out, _GROQ_MODEL, user
+    return out, GROQ_LLAMA, user
 
 
 def researcher_node(state: AgentState) -> AgentState:
-    with logfire.span("researcher_agent", model_used=_GROQ_MODEL, goal_preview=state["goal"][:100]):
+    with logfire.span("researcher_agent", model_used=GROQ_LLAMA, goal_preview=state["goal"][:100]):
         text, model_used, user_message = run_market_research(state)
         state["research_output"] = text
         state["messages"] = (state.get("messages", []) + [

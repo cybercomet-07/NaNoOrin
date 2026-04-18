@@ -19,22 +19,34 @@ import agents.developer as developer
 from graph import graph
 from state import AgentState, get_initial_state
 
+# Match backend/llm_clients.py + tools — real keys required for full graph + APIs
 _DEMO_KEYS = (
-    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY_1",
+    "GOOGLE_API_KEY_2",
+    "GOOGLE_API_KEY_3",
+    "GOOGLE_API_KEY_4",
+    "GROQ_API_KEY_1",
     "E2B_API_KEY",
-    "GROQ_API_KEY",
     "TAVILY_API_KEY",
 )
 
+# conftest sets this placeholder so imports work without a real .env
+_PYTEST_PLACEHOLDER = "pytest-placeholder-not-for-production"
+
 
 def _full_stack_configured() -> bool:
-    return all(os.getenv(k) for k in _DEMO_KEYS)
+    # Opt-in only — avoids running billable / flaky graph on every `pytest` when .env exists
+    if os.getenv("ORIN_LIVE_SELF_HEALING") != "1":
+        return False
+    return all(
+        os.getenv(k) and os.getenv(k) != _PYTEST_PLACEHOLDER for k in _DEMO_KEYS
+    )
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(
     not _full_stack_configured(),
-    reason="Set ANTHROPIC_API_KEY, E2B_API_KEY, GROQ_API_KEY, TAVILY_API_KEY for live demo test",
+    reason="Set ORIN_LIVE_SELF_HEALING=1 and real GOOGLE_API_KEY_1–4, GROQ_API_KEY_1, E2B_API_KEY, TAVILY_API_KEY",
 )
 async def test_self_healing_wrong_library(monkeypatch: pytest.MonkeyPatch) -> None:
     """

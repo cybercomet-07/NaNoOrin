@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logfire
 
-from llm_clients import call_agent_llm  # noqa: F401
 from state import AgentState, Task, TestRun
 
 

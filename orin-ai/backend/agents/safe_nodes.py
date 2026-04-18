@@ -6,7 +6,6 @@ from collections.abc import Callable
 
 import logfire
 
-from llm_clients import call_agent_llm  # noqa: F401
 from state import AgentState
 
 

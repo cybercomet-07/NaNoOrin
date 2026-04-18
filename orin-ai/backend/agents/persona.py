@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import logfire
 
-from llm_clients import call_agent_llm
+from llm_clients import GEMINI_FLASH_LITE, call_agent_llm
 from llm_json import strip_code_fences
 from state import AgentState
-
-_GEMINI_FLASH_LITE = "gemini-2.5-flash-lite-preview-06-17"
 
 
 def generate_personas(state: AgentState) -> tuple[str, str, str]:

@@ -8,8 +8,6 @@ from llm_clients import call_agent_llm
 from llm_json import parse_json_object
 from state import AgentState, Architecture
 
-_GEMINI_FLASH = "gemini-2.5-flash-preview-05-20"
-
 
 def generate_architecture(state: AgentState) -> tuple[Architecture, str]:
     system = "You are a senior software architect. Generate a complete technical architecture as JSON."
@@ -51,7 +49,7 @@ def generate_architecture(state: AgentState) -> tuple[Architecture, str]:
 
 
 def architect_node(state: AgentState) -> AgentState:
-    with logfire.span("architect_agent", goal=state["goal"][:50], model=_GEMINI_FLASH):
+    with logfire.span("architect_agent", goal=state["goal"][:50]):
         arch, user_message = generate_architecture(state)
         state["architecture"] = arch
         arch_summary = f"tech_rationale: {arch.tech_rationale[:500]}"
