@@ -1,10 +1,12 @@
 # Orin AI — Autonomous Product Lifecycle Engine
 
-> One prompt. No human in the loop. Working, tested, audited code in under 10 minutes.
+## One line
+
+One prompt. No human in the loop. Working, tested, audited code in under 10 minutes.
 
 ## Status
 
-🚧 **Phase 0 complete — scaffold created. Implementation begins Phase 1.**
+Backend pipeline (LangGraph + FastAPI + agents), demo warm-up script, and this README are in place for hackathon demo and rehearsal.
 
 ---
 
@@ -81,13 +83,24 @@ The signature demo moment:
 ```bash
 cd orin-ai
 cp .env.example backend/.env
-# Fill in all API keys in backend/.env
+# Fill in all API keys in backend/.env (see .env.example)
 
 cd backend
 pip install -r requirements.txt
 
 uvicorn main:app --reload
 ```
+
+### Demo warm-up (run ~30 minutes before going on stage)
+
+With full keys in `backend/.env` and **without** `ORIN_SKIP_STARTUP_VALIDATION` (production-style validation):
+
+```bash
+cd backend
+python demo_warmup.py
+```
+
+Runs two canned prompts (happy path + adversarial `fastchroma` self-heal) and prints status, iterations, and timing. Open Logfire and bookmark trace URLs before the demo.
 
 ---
 

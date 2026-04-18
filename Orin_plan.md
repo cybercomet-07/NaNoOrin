@@ -1200,6 +1200,8 @@ One prompt. No human in the loop. Working, tested, audited code in under 10 minu
 (the comparison table from the brief: vs Cursor, vs Devin, vs ChatGPT+Code Interpreter, vs n8n)
 ```
 
+**Phase 9 — implemented:** `backend/demo_warmup.py` runs the two demo prompts via `graph.ainvoke` with timing and status output; `orin-ai/README.md` includes the sections above (plus seven-agent table, Gemini/Groq stack, warm-up command).
+
 ---
 
 ## EXECUTION ORDER CHECKLIST
@@ -1236,8 +1238,8 @@ DAY 2 MORNING:
 
 DAY 2 AFTERNOON:
 [x] PROMPT 8.1 — Error handling hardening
-[ ] PROMPT 9.1 — Demo warm-up script
-[ ] PROMPT 9.2 — README
+[x] PROMPT 9.1 — Demo warm-up script
+[x] PROMPT 9.2 — README
 [ ] Demo rehearsal x3 (PDF Section 13 script — 4 minutes exactly)
 [ ] Record backup demo video
 ```
