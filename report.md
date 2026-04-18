@@ -34,7 +34,7 @@ This document is for **anyone joining the repo** (including a new coding agent):
 | `backend/startup_check.py` | Validates env/services when not skipped. |
 | `frontend/` | **Next.js** client for the pipeline (proxies/API URL via env — see Dockerfile + `next.config.ts`). |
 | `docker-compose.yml` | **redis** + **backend** + **frontend**; `BACKEND_URL` build args for in-network API URL. |
-| `.env.example` | Template for **`backend/.env`** (copy path documented in `orin-ai/README.md`). Lists Gemini, Groq, Tavily, E2B, Logfire, Redis, `ORIN_SKIP_STARTUP_VALIDATION`, optional live tests. |
+| `.env.example` | Template for **`backend/.env`** (copy path documented in `orin-ai/README.md`). Lists `GROQ_API_KEY_1`–`4` (see routing in `llm_clients.py`), Tavily, E2B, Logfire, Redis, `ORIN_SKIP_STARTUP_VALIDATION`, optional live tests. |
 | `run-demo.sh` | Bash helper: checks Docker + `.env`, picks free host port 3000–3003, runs Compose. |
 
 ### 2.3 Secrets and local files (do not commit)
@@ -49,7 +49,7 @@ This document is for **anyone joining the repo** (including a new coding agent):
 
 - **Orchestration:** LangGraph with shared **state** (`state.py`) and **models** (`models.py`) for API contracts.
 - **Phases (conceptual):** parallel discovery (researcher + persona) → architect → developer/critic loop → auditor (and readme generation where wired).
-- **External services:** Groq (researcher), Gemini family (several agents), Tavily (search), E2B (sandbox), Logfire (telemetry), Redis (persistence for runs when configured).
+- **External services:** Groq (all LLM agents per fixed key/model map in `llm_clients.py`), Tavily (search), E2B (sandbox), Logfire (telemetry), Redis (persistence for runs when configured).
 - **Health:** `GET /health` reports connectivity flags (e.g. E2B/Tavily probes may be false if keys/network fail); **`status: "ok"`** still means the API process is up — interpret fields carefully for demos.
 
 ---
@@ -83,19 +83,29 @@ On push/PR to `main` / `master` / `Master`:
 
 ---
 
-## 7. What is remaining / open gaps
+## 6.1 Connectivity audit (what is wired)
 
-These are **actionable** for the next sprint or agent:
+| Link | Status |
+|------|--------|
+| **Frontend → API** | Next.js rewrites `/api/*` → `BACKEND_URL` (Docker: `http://backend:8000`). Browser uses same-origin `/api/run`, `/api/stream/{id}`, `/api/artifacts/{id}`. |
+| **Compose** | `orin-ai/.env` → backend container; frontend build gets `BACKEND_URL` for rewrites. |
+| **Backend env** | `main.py` loads `backend/.env` then `orin-ai/.env` so Compose and local uvicorn agree. |
+| **CORS** | Regex allows `localhost` / `127.0.0.1` on any port; optional `ALLOWED_ORIGINS` for deployed UI hostnames. |
+| **Redis** | Optional: API runs if Redis down; run state/artifacts then do not persist. |
+| **CI** | Backend pytest + frontend lint/build + compose validate — matches `orin-ai/` tree. |
+
+## 7. What is remaining / open gaps
 
 | Area | Gap |
 |------|-----|
-| **API base URL / env** | Keep a single documented story for local dev, Docker Compose, and production (`NEXT_PUBLIC_*`, `BACKEND_URL`, API origin). |
-| **E2E tests** | No Playwright/Cypress in repo; CONTRIBUTING lists this as follow-up. |
-| **Dependabot** | Optional; not enabled by default. |
-| **Plans / docs** | Merge removed `Orin_plan.md` and `Orin_plan_updated .md` from tree at some point; recover from git history if still needed. |
-| **Production hardening** | Secrets management, rate limits, auth for `/run`, Redis HA, and non-dev CORS are not fully specified in code for a public deployment. |
-| **Observability** | Logfire token must be valid or logs will noise/fail checks depending on config. |
-| **Key hygiene** | All billable integrations need valid keys in env; demo reliability depends on Tavily/E2B/Gemini/Groq availability. |
+| **E2E tests** | No Playwright/Cypress; add when stack is stable. |
+| **Auth / abuse** | `POST /run` is unauthenticated — add API keys or OAuth before public internet exposure. |
+| **Rate limits** | No per-IP or global throttling on `/run` or SSE. |
+| **Dependabot** | Optional. |
+| **Plans / docs** | Old plan files may only exist in git history. |
+| **Secrets** | Use a secret manager in production; never commit `.env`. |
+| **Observability** | Invalid `LOGFIRE_TOKEN` causes noise or failures depending on version. |
+| **Key hygiene** | Tavily/E2B/Groq must be valid for full pipeline demos. |
 
 ---
 

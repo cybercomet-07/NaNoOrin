@@ -1,4 +1,4 @@
-"""Architect agent — technical architecture (Gemini Flash)."""
+"""Architect agent — technical architecture (Groq llama-3.3-70b)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,29 @@ import logfire
 from llm_clients import call_agent_llm
 from llm_json import parse_json_object
 from state import AgentState, Architecture
+
+
+def fallback_architecture(goal: str) -> Architecture:
+    """Non-empty spec when the LLM returns invalid JSON or empty fields — keeps Developer running."""
+    g = goal[:500].replace("\n", " ").strip() or "the user request"
+    return Architecture(
+        docker_compose=(
+            "version: '3.8'\nservices:\n  web:\n    build: .\n    ports:\n      - '8000:8000'\n"
+        ),
+        db_schema=(
+            "from sqlalchemy.orm import DeclarativeBase\n\n"
+            "class Base(DeclarativeBase):\n    pass\n"
+        ),
+        api_spec=(
+            "openapi: 3.0.0\ninfo:\n  title: MVP API\n  version: '1.0.0'\n"
+            "paths:\n  /health:\n    get:\n      summary: Health check\n"
+            "      responses:\n        '200':\n          description: OK\n"
+        ),
+        tech_rationale=(
+            "Fallback architecture: upstream JSON was missing or invalid. "
+            f"Implement a minimal FastAPI app with pytest tests for: {g!r}"
+        ),
+    )
 
 
 def generate_architecture(state: AgentState) -> tuple[Architecture, str]:
@@ -28,7 +51,7 @@ def generate_architecture(state: AgentState) -> tuple[Architecture, str]:
     text = call_agent_llm(
         "architect", system, user,
         messages_history=state.get("messages", []),
-        max_tokens=16384,
+        max_tokens=8192,
     )
     data = parse_json_object(text or "")
     arch = Architecture(
@@ -50,7 +73,16 @@ def generate_architecture(state: AgentState) -> tuple[Architecture, str]:
 
 def architect_node(state: AgentState) -> AgentState:
     with logfire.span("architect_agent", goal=state["goal"][:50]):
-        arch, user_message = generate_architecture(state)
+        try:
+            arch, user_message = generate_architecture(state)
+        except Exception as e:
+            logfire.warning("architect_using_fallback", error=str(e)[:300])
+            arch = fallback_architecture(state["goal"])
+            user_message = (
+                f"[fallback] Architect LLM output was invalid: {str(e)[:200]}\n"
+                f"Using default blueprint for goal: {state['goal'][:500]}"
+            )
+            state["error_log"].append(f"architect: {type(e).__name__}: {str(e)[:400]}")
         state["architecture"] = arch
         arch_summary = f"tech_rationale: {arch.tech_rationale[:500]}"
         state["messages"] = (state.get("messages", []) + [

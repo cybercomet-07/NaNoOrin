@@ -1,4 +1,4 @@
-"""Auditor agent — regex security scan + Gemini Flash-Lite review."""
+"""Auditor agent — regex security scan + Groq llama-3.1-8b-instant review."""
 
 from __future__ import annotations
 

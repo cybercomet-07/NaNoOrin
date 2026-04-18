@@ -8,15 +8,14 @@ import sys
 # Phase 8.2: allow importing `main` without full keys / live E2B during tests
 os.environ.setdefault("ORIN_SKIP_STARTUP_VALIDATION", "1")
 
-# llm_clients builds OpenAI/Groq clients at import — pytest collection fails without keys.
+# llm_clients builds Groq clients at import — pytest collection fails without keys.
 # Placeholders are enough for unit tests that do not call the network.
 _PLACEHOLDER = "pytest-placeholder-not-for-production"
 for _k in (
-    "GOOGLE_API_KEY_1",
-    "GOOGLE_API_KEY_2",
-    "GOOGLE_API_KEY_3",
-    "GOOGLE_API_KEY_4",
     "GROQ_API_KEY_1",
+    "GROQ_API_KEY_2",
+    "GROQ_API_KEY_3",
+    "GROQ_API_KEY_4",
     "TAVILY_API_KEY",
     "E2B_API_KEY",
     "LOGFIRE_TOKEN",

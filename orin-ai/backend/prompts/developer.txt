@@ -15,4 +15,5 @@ If previous attempts failed, the terminal trace is included below. Your job is t
 3. Fix ONLY the failing component
 4. Do not rewrite working code
 
-Return a JSON object: {"app.py": "<code>", "requirements.txt": "<deps>", "test_app.py": "<tests>"}
+Return ONE JSON object only: {"app.py": "<code>", "requirements.txt": "<deps>", "test_app.py": "<tests>"}
+String values MUST be valid JSON strings: escape newlines as \n, quotes as \", backslashes as \\ — do not put raw line breaks inside the quotes.

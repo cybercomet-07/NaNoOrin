@@ -17,7 +17,7 @@ Include:
 4. Installation instructions (from requirements.txt)
 5. API endpoints (from the OpenAPI spec)
 6. How to run tests
-7. Environment variables needed (reference GOOGLE_API_KEY_1–4, GROQ_API_KEY_1, TAVILY_API_KEY, E2B_API_KEY, LOGFIRE_TOKEN as in a typical Orin AI deployment; say to copy backend/.env from .env.example)
+7. Environment variables needed (reference GROQ_API_KEY_1–4, TAVILY_API_KEY, E2B_API_KEY, LOGFIRE_TOKEN as in a typical Orin AI deployment; say to copy backend/.env from .env.example)
 8. A "Built with Orin AI" line or badge text at the bottom
 
 Format: Valid Markdown. Include fenced code blocks for shell commands. No placeholders like <YOUR_VALUE>."""

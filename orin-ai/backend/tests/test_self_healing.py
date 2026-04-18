@@ -21,11 +21,10 @@ from state import AgentState, get_initial_state
 
 # Match backend/llm_clients.py + tools — real keys required for full graph + APIs
 _DEMO_KEYS = (
-    "GOOGLE_API_KEY_1",
-    "GOOGLE_API_KEY_2",
-    "GOOGLE_API_KEY_3",
-    "GOOGLE_API_KEY_4",
     "GROQ_API_KEY_1",
+    "GROQ_API_KEY_2",
+    "GROQ_API_KEY_3",
+    "GROQ_API_KEY_4",
     "E2B_API_KEY",
     "TAVILY_API_KEY",
 )
@@ -46,7 +45,7 @@ def _full_stack_configured() -> bool:
 @pytest.mark.asyncio
 @pytest.mark.skipif(
     not _full_stack_configured(),
-    reason="Set ORIN_LIVE_SELF_HEALING=1 and real GOOGLE_API_KEY_1–4, GROQ_API_KEY_1, E2B_API_KEY, TAVILY_API_KEY",
+    reason="Set ORIN_LIVE_SELF_HEALING=1 and real GROQ_API_KEY_1–4, E2B_API_KEY, TAVILY_API_KEY",
 )
 async def test_self_healing_wrong_library(monkeypatch: pytest.MonkeyPatch) -> None:
     """

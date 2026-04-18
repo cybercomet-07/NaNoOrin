@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import json
-
 import logfire
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 
@@ -18,11 +15,14 @@ from agents.readme_generator import readme_node
 from agents.researcher import researcher_node
 from agents.safe_nodes import safe_node_wrapper
 from agents.supervisor import supervisor_node
-from state import AgentState, get_initial_state
+from state import (
+    DEFAULT_PERSONAS_JSON,
+    DEFAULT_RESEARCH_JSON,
+    AgentState,
+    get_initial_state,
+)
 
 _researcher_safe = safe_node_wrapper(researcher_node)
-_persona_safe = safe_node_wrapper(persona_node)
-_architect_safe = safe_node_wrapper(architect_node)
 _readme_safe = safe_node_wrapper(readme_node)
 
 
@@ -46,29 +46,11 @@ def join_node(state: AgentState) -> AgentState:
 
     if not state.get("research_output"):
         issues.append("WARNING: research_output missing — Architect proceeding without market data")
-        state["research_output"] = json.dumps(
-            {
-                "competitors": [],
-                "pricing": [],
-                "gaps": ["Market research unavailable — proceeding with general knowledge"],
-                "market_size": "Unknown",
-            }
-        )
+        state["research_output"] = DEFAULT_RESEARCH_JSON
 
     if not state.get("personas"):
         issues.append("WARNING: personas missing — Architect proceeding without user personas")
-        state["personas"] = json.dumps(
-            [
-                {
-                    "name": "Default User",
-                    "role": "Developer",
-                    "company_size": "Startup",
-                    "pain_points": ["Too much manual work"],
-                    "job_to_be_done": "Build software faster",
-                    "success_metric": "Working app in under 10 minutes",
-                }
-            ]
-        )
+        state["personas"] = DEFAULT_PERSONAS_JSON
 
     if issues:
         state["error_log"].extend(issues)
@@ -79,6 +61,14 @@ def join_node(state: AgentState) -> AgentState:
         has_research=bool(state.get("research_output")),
         has_personas=bool(state.get("personas")),
     )
+    # Single fan-in point: merge parallel phase into `messages` (avoids LangGraph parallel
+    # merge conflict when Researcher and Persona both wrote to `messages`).
+    ro = (state.get("research_output") or "")[:3000]
+    pe = (state.get("personas") or "")[:3000]
+    state["messages"] = (state.get("messages", []) + [
+        {"role": "user", "content": "[join] Research + Persona outputs merged for downstream agents."},
+        {"role": "assistant", "content": f"[research excerpt]\n{ro}\n\n[personas excerpt]\n{pe}"},
+    ])[-12:]
     return state
 
 
@@ -96,9 +86,9 @@ builder = StateGraph(AgentState)
 
 builder.add_node("supervisor", supervisor_node)
 builder.add_node("researcher", _researcher_safe)
-builder.add_node("persona", _persona_safe)
+builder.add_node("persona", persona_node)
 builder.add_node("join", join_node)
-builder.add_node("architect", _architect_safe)
+builder.add_node("architect", architect_node)
 builder.add_node("developer", developer_node)
 builder.add_node("critic", critic_node)
 builder.add_node("auditor", auditor_node)
@@ -138,6 +128,7 @@ builder.add_edge("readme_generator", "end_success")
 builder.add_edge("end_success", END)
 builder.add_edge("end_failed", END)
 
-graph = builder.compile(checkpointer=MemorySaver())
+# No checkpointer: we do not need resume/human-in-the-loop; MemorySaver grows unbounded per thread_id.
+graph = builder.compile()
 
 __all__ = ["graph", "get_initial_state"]

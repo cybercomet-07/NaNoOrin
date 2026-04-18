@@ -35,11 +35,11 @@ Backend pipeline (LangGraph + FastAPI + agents), demo warm-up script, and this R
 
 ```
 User Prompt
-  → Market Research (Tavily + Groq)
-  → User Personas (Gemini Flash-Lite)
-  → Architecture Design (Gemini Flash)
-  → Code Generation + Test Loop (Gemini Flash + E2B sandbox)
-  → Security Audit (regex + Gemini Flash-Lite)
+  → Market Research (Tavily + Groq llama-3.3-70b)
+  → User Personas (Groq llama-3.1-8b-instant)
+  → Architecture Design (Groq llama-3.3-70b)
+  → Code Generation + Test Loop (Groq llama-3.3-70b + E2B sandbox)
+  → Security Audit (regex + Groq llama-3.1-8b-instant)
   → Fully tested, audited MVP
 ```
 
@@ -58,15 +58,15 @@ User Prompt
 
 ## The Seven Agents
 
-| Agent | Model | Role | Key Tool |
-|---|---|---|---|
-| Supervisor | Gemini Flash | Orchestrates TaskGraph | LangGraph routing |
-| Researcher | Groq Llama 3.3 70B | Competitor + market analysis | Tavily search |
-| Persona | Gemini Flash-Lite | User persona generation | Gemini API |
-| Architect | Gemini Flash | Docker, DB schema, API spec | Gemini API |
-| Developer | Gemini Flash | Writes + fixes code | E2B sandbox |
-| Critic | — (heuristics) | Pass/fail on test output | Test stdout/stderr |
-| Auditor | Gemini Flash-Lite | Security scan | Regex + Gemini API |
+| Agent | Key | Model | Role | Key Tool |
+|---|---|---|---|---|
+| Supervisor | `GROQ_API_KEY_1` | llama-3.3-70b-versatile | Orchestrates TaskGraph | LangGraph routing |
+| Researcher | `GROQ_API_KEY_1` | llama-3.3-70b-versatile | Competitor + market analysis | Tavily search |
+| Architect | `GROQ_API_KEY_2` | llama-3.3-70b-versatile | Docker, DB schema, API spec | Groq |
+| Developer | `GROQ_API_KEY_3` | llama-3.3-70b-versatile | Writes + fixes code | E2B sandbox |
+| Critic | — | — (heuristics only; no LLM call) | Pass/fail on test output | Test stdout/stderr |
+| Persona | `GROQ_API_KEY_4` | llama-3.1-8b-instant | User persona generation | Groq |
+| Auditor | `GROQ_API_KEY_4` | llama-3.1-8b-instant | Security scan | Regex + Groq |
 
 ---
 
@@ -93,24 +93,31 @@ The signature demo moment:
 | Code Sandbox | E2B Code Interpreter |
 | Search | Tavily |
 | Observability | Logfire |
-| LLM (fast) | Groq Llama 3.3 70B (researcher) |
-| LLM (quality) | Google Gemini Flash / Flash-Lite (OpenAI-compatible API) |
+| LLM | Groq — `llama-3.3-70b-versatile` (supervisor, researcher, architect, developer, critic); `llama-3.1-8b-instant` (persona, auditor) |
 | Frontend | Next.js 14 |
 
 ---
 
 ## Setup
 
+**Environment files:** The API loads `orin-ai/.env` first, then **`orin-ai/backend/.env`** (so backend-specific values win on duplicates), then the process environment.  
+- **Docker Compose** (`docker compose` / `run-demo.sh`): put secrets in **`orin-ai/.env`** (matches `env_file` in compose).  
+- **Local `uvicorn` from `backend/`**: either file works; use **`backend/.env`** for overrides per developer.
+
 ```bash
 cd orin-ai
-cp .env.example backend/.env
-# Fill in all API keys in backend/.env (see .env.example)
+cp .env.example .env
+cp .env.example backend/.env   # optional duplicate; or symlink: ln -sf ../.env backend/.env
+# Fill keys in at least one of the above (see .env.example)
 
 cd backend
 pip install -r requirements.txt
+export ORIN_SKIP_STARTUP_VALIDATION=1   # optional: skip strict startup during dev
 
 uvicorn main:app --reload
 ```
+
+**Production CORS:** set `ALLOWED_ORIGINS` to your deployed UI origin(s), comma-separated. Localhost remains allowed for development.
 
 ### Demo warm-up (run ~30 minutes before going on stage)
 

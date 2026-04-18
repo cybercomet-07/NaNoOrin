@@ -1,4 +1,4 @@
-"""Persona agent — user personas (Gemini Flash-Lite)."""
+"""Persona agent — user personas (Groq llama-3.1-8b-instant)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import logfire
 
 from llm_clients import GEMINI_FLASH_LITE, call_agent_llm
 from llm_json import strip_code_fences
-from state import AgentState
+from state import DEFAULT_PERSONAS_JSON, AgentState
 
 
 def generate_personas(state: AgentState) -> tuple[str, str, str]:
@@ -20,16 +20,19 @@ def generate_personas(state: AgentState) -> tuple[str, str, str]:
 
     text = call_agent_llm("persona", system, user)
     out = strip_code_fences(text or "").strip()
-    return out, _GEMINI_FLASH_LITE, user
+    return out, GEMINI_FLASH_LITE, user
 
 
-def persona_node(state: AgentState) -> AgentState:
-    with logfire.span("persona_agent", model_used=_GEMINI_FLASH_LITE, goal_preview=state["goal"][:100]):
-        text, model_used, user_message = generate_personas(state)
-        state["personas"] = text
-        state["messages"] = (state.get("messages", []) + [
-            {"role": "user",      "content": user_message[:3000]},
-            {"role": "assistant", "content": text[:3000]},
-        ])[-12:]
-        logfire.info("persona_complete", model_used=model_used)
-    return state
+def persona_node(state: AgentState) -> dict:
+    with logfire.span("persona_agent", model_used=GEMINI_FLASH_LITE, goal_preview=state["goal"][:100]):
+        try:
+            text, model_used, user_message = generate_personas(state)
+            logfire.info("persona_complete", model_used=model_used)
+            return {"personas": text}
+        except Exception as e:
+            logfire.warning("persona_using_default", error=str(e)[:300])
+            # Partial updates only — never return full state beside Researcher (goal merge crash).
+            return {
+                "personas": DEFAULT_PERSONAS_JSON,
+                "error_log": [f"persona: {type(e).__name__}: {str(e)[:400]}"],
+            }

@@ -16,3 +16,4 @@ Common root causes to check:
 - Port or environment variable not set
 
 Return a JSON object with ONLY the files that changed: {"<filename>": "<fixed_code>"}
+Each value must be a valid JSON string (use \n for newlines inside code, never raw line breaks inside the quotes).

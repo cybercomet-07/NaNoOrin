@@ -1,4 +1,4 @@
-"""Researcher agent — market intelligence (Tavily + Groq)."""
+"""Researcher agent — market intelligence (Tavily + Groq llama-3.3-70b)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 
 import logfire
 
-from llm_clients import GROQ_LLAMA, call_agent_llm
+from llm_clients import GEMINI_FLASH, call_agent_llm
 from llm_json import strip_code_fences
 from state import AgentState
 from tools.tavily_tools import search_competitors
@@ -24,16 +24,13 @@ def run_market_research(state: AgentState) -> tuple[str, str, str]:
     )
     text = call_agent_llm("researcher", system, user, max_tokens=2048, temperature=0.2)
     out = strip_code_fences(text or "").strip()
-    return out, GROQ_LLAMA, user
+    return out, GEMINI_FLASH, user
 
 
-def researcher_node(state: AgentState) -> AgentState:
-    with logfire.span("researcher_agent", model_used=GROQ_LLAMA, goal_preview=state["goal"][:100]):
+def researcher_node(state: AgentState) -> dict:
+    with logfire.span("researcher_agent", model_used=GEMINI_FLASH, goal_preview=state["goal"][:100]):
         text, model_used, user_message = run_market_research(state)
-        state["research_output"] = text
-        state["messages"] = (state.get("messages", []) + [
-            {"role": "user",      "content": user_message[:3000]},
-            {"role": "assistant", "content": text[:3000]},
-        ])[-12:]
+        # Return only this key — parallel Persona also runs; full-state returns duplicate `goal`
+        # and trigger LangGraph InvalidUpdateError (see INVALID_CONCURRENT_GRAPH_UPDATE).
         logfire.info("researcher_complete", model_used=model_used)
-    return state
+    return {"research_output": text}

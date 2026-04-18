@@ -17,9 +17,20 @@ import asyncio
 import json
 import os
 import sys
+import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Literal, cast
+
+from dotenv import load_dotenv
+
+# Load env before imports that read os.environ. Parent `orin-ai/.env` first, then
+# `backend/.env` overrides (Compose usually injects via env_file; files optional locally).
+_backend_dir = Path(__file__).resolve().parent
+load_dotenv(_backend_dir.parent / ".env")
+load_dotenv(_backend_dir / ".env")
+load_dotenv()
 
 import logfire
 import redis.asyncio as aioredis
@@ -29,6 +40,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
+from debug_session_log import dbg
 from models import (
     ArtifactsResponse,
     HealthResponse,
@@ -72,6 +84,13 @@ logfire.configure()
 
 # Queues stay in-memory: asyncio.Queue cannot be serialised to Redis
 run_queues: dict[str, asyncio.Queue] = {}
+# Background pipeline tasks (for SSE timeout / stuck detection)
+_pipeline_tasks: dict[str, asyncio.Task[None]] = {}
+# Limit concurrent runs (DoS / quota protection)
+_MAX_RUNS = max(1, int(os.getenv("ORIN_MAX_CONCURRENT_RUNS", "5")))
+_run_semaphore = asyncio.Semaphore(_MAX_RUNS)
+_QUEUE_DRAIN_SEC = max(0, int(os.getenv("ORIN_QUEUE_DRAIN_SEC", "15")))
+_SSE_MAX_SEC = max(60, int(os.getenv("ORIN_SSE_MAX_SEC", "1800")))
 
 # Redis client — set during lifespan startup
 _redis: aioredis.Redis | None = None
@@ -123,9 +142,35 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Orin AI", version="1.0.0", lifespan=lifespan)
 
+# CORS: local dev matches localhost:any port. Production: set ALLOWED_ORIGINS to your UI
+# origins (comma-separated), e.g. https://app.example.com,https://www.example.com
+_extra_cors = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+]
+_MAX_BODY_RUN = int(os.getenv("ORIN_MAX_RUN_BODY_BYTES", "65536"))
+
+
+@app.middleware("http")
+async def limit_run_body_size(request: Request, call_next):
+    if request.method == "POST" and request.url.path == "/run":
+        cl = request.headers.get("content-length")
+        if cl is not None:
+            try:
+                if int(cl) > _MAX_BODY_RUN:
+                    return JSONResponse(
+                        {"detail": "Request body too large"},
+                        status_code=413,
+                    )
+            except ValueError:
+                pass
+    return await call_next(request)
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[],
+    allow_origins=_extra_cors,
     allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1):\d+$",
     allow_credentials=True,
     allow_methods=["*"],
@@ -152,7 +197,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         return JSONResponse({"detail": exc.errors()}, status_code=422)
     logfire.error("unhandled_exception", error=str(exc), path=request.url.path)
     return JSONResponse(
-        {"error": "Internal error", "detail": str(exc)},
+        {"error": "Internal error", "detail": "An unexpected error occurred."},
         status_code=500,
     )
 
@@ -179,13 +224,34 @@ async def run(body: RunRequest):
     Creates a run_id, fires execute_pipeline() as background task,
     returns {"run_id": str} immediately without waiting.
     """
+    await _run_semaphore.acquire()
     run_id = str(uuid.uuid4())
     queue: asyncio.Queue = asyncio.Queue()
-
     run_queues[run_id] = queue
     await _set_status(run_id, "RUNNING")
 
-    asyncio.create_task(execute_pipeline(run_id, body.prompt, queue))
+    async def _run_with_cleanup() -> None:
+        try:
+            await execute_pipeline(run_id, body.prompt, queue)
+        finally:
+            _run_semaphore.release()
+            if _QUEUE_DRAIN_SEC:
+                await asyncio.sleep(_QUEUE_DRAIN_SEC)
+            run_queues.pop(run_id, None)
+            _pipeline_tasks.pop(run_id, None)
+
+    t = asyncio.create_task(_run_with_cleanup())
+    _pipeline_tasks[run_id] = t
+
+    def _log_task_errors(task: asyncio.Task[None]) -> None:
+        try:
+            exc = task.exception()
+            if exc is not None:
+                logfire.error("pipeline_task_failed", run_id=run_id, error=str(exc))
+        except asyncio.CancelledError:
+            pass
+
+    t.add_done_callback(_log_task_errors)
 
     return RunResponse(run_id=run_id)
 
@@ -205,9 +271,22 @@ async def stream(run_id: str):
         raise HTTPException(status_code=404, detail=f"run_id {run_id!r} not found")
 
     queue = run_queues[run_id]
+    deadline = time.monotonic() + _SSE_MAX_SEC
 
     async def event_generator():
         while True:
+            if time.monotonic() > deadline:
+                yield {
+                    "data": json.dumps(
+                        make_event(
+                            event_type="status_update",
+                            agent="system",
+                            payload={"message": "Stream timed out"},
+                            status="FAILED",
+                        )
+                    )
+                }
+                break
             try:
                 event = await asyncio.wait_for(queue.get(), timeout=30.0)
             except asyncio.TimeoutError:
@@ -288,7 +367,7 @@ async def health():
     Orin plan: {"status": "ok", "e2b": bool, "tavily": bool, "redis": bool}.
     Sandbox + Tavily clients are synchronous — run in a thread pool.
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     try:
         e2b_ok: bool = await loop.run_in_executor(None, validate_e2b_connection)
     except Exception:
@@ -363,12 +442,30 @@ async def execute_pipeline(run_id: str, prompt: str, queue: asyncio.Queue) -> No
         ))
 
     except Exception as exc:
+        # region agent log
+        try:
+            import traceback
+
+            dbg(
+                "H2",
+                "main.py:execute_pipeline",
+                "pipeline_uncaught",
+                {
+                    "exc_type": type(exc).__name__,
+                    "msg": str(exc)[:900],
+                    "tb_tail": traceback.format_exc()[-2500:],
+                },
+                run_id,
+            )
+        except Exception:
+            pass
+        # endregion
         logfire.error("pipeline_failed", run_id=run_id, error=str(exc))
         await _set_status(run_id, "FAILED")
         await queue.put(make_event(
             event_type="status_update",
             agent="system",
-            payload={"error": str(exc)},
+            payload={"error": "Pipeline failed"},
             status="FAILED",
         ))
 

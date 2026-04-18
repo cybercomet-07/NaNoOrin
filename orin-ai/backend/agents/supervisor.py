@@ -32,12 +32,12 @@ def _fallback_task_graph() -> list[Task]:
 
 def _tasks_from_payload(rows: list) -> list[Task]:
     out: list[Task] = []
-    for r in rows:
+    for i, r in enumerate(rows):
         if not isinstance(r, dict):
             continue
         out.append(
             Task(
-                task_id=str(r["task_id"]),
+                task_id=str(r.get("task_id") or f"task_{i}"),
                 assigned_agent=str(r["assigned_agent"]),
                 dependencies=[str(x) for x in r.get("dependencies", [])],
                 success_criteria=str(r.get("success_criteria", "")),

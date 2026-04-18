@@ -1,7 +1,31 @@
 """AgentState — single source of truth for the Orin AI pipeline."""
 
+import json
 from dataclasses import dataclass
-from typing import Literal, Optional, TypedDict
+from operator import add
+from typing import Annotated, Literal, Optional, TypedDict
+
+# Used by join_node and persona fallback when research/persona LLM output is missing or invalid.
+DEFAULT_RESEARCH_JSON = json.dumps(
+    {
+        "competitors": [],
+        "pricing": [],
+        "gaps": ["Market research unavailable — proceeding with general knowledge"],
+        "market_size": "Unknown",
+    }
+)
+DEFAULT_PERSONAS_JSON = json.dumps(
+    [
+        {
+            "name": "Default User",
+            "role": "Developer",
+            "company_size": "Startup",
+            "pain_points": ["Too much manual work"],
+            "job_to_be_done": "Build software faster",
+            "success_metric": "Working app in under 10 minutes",
+        }
+    ]
+)
 
 
 @dataclass
@@ -58,7 +82,8 @@ class AgentState(TypedDict):
 
     # Pipeline control
     status: Literal["RUNNING", "FAILED", "PANIC", "FINALIZED"]
-    error_log: list[str]
+    # Parallel branches (e.g. Researcher + Persona) may each append errors — use reducer merge.
+    error_log: Annotated[list[str], add]
     messages: list[dict]
 
 

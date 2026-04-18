@@ -27,8 +27,8 @@ services:
       # Set FRONTEND_HOST_PORT=3001 if 3000 is already in use (see run-demo.sh)
       - "${FRONTEND_HOST_PORT:-3000}:3000"
     environment:
+      # Used at `next build` via Dockerfile ARG BACKEND_URL (same value). Browser calls /api/* → rewrites to backend.
       - BACKEND_URL=http://backend:8000
-      - NEXT_PUBLIC_API_URL=http://backend:8000
     depends_on:
       - backend
     restart: unless-stopped

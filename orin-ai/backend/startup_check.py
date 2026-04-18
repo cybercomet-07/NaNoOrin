@@ -24,11 +24,10 @@ def validate_environment() -> None:
     load_dotenv()
 
     required_keys = {
-        "GOOGLE_API_KEY_1": "Gemini - Supervisor",
-        "GOOGLE_API_KEY_2": "Gemini - Architect",
-        "GOOGLE_API_KEY_3": "Gemini - Developer / Critic",
-        "GOOGLE_API_KEY_4": "Gemini - Persona / Auditor",
-        "GROQ_API_KEY_1": "Groq - Researcher",
+        "GROQ_API_KEY_1": "Groq — Supervisor + Researcher (llama-3.3-70b)",
+        "GROQ_API_KEY_2": "Groq — Architect (llama-3.3-70b)",
+        "GROQ_API_KEY_3": "Groq — Developer (llama-3.3-70b; critic is heuristic-only)",
+        "GROQ_API_KEY_4": "Groq — Persona + Auditor (llama-3.1-8b-instant)",
         "TAVILY_API_KEY": "Market research search",
         "E2B_API_KEY": "Code execution sandbox (CRITICAL - demo breaks without this)",
         "LOGFIRE_TOKEN": "Observability dashboard (open during demo)",
