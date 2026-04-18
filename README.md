@@ -11,6 +11,6 @@ The default integration branch for that layout is **`main`**.
 - **Frontend:** [`orin-ai/frontend/`](orin-ai/frontend/) — Next.js app (when present in this branch).
 - **Compose:** [`orin-ai/docker-compose.yml`](orin-ai/docker-compose.yml) — backend, frontend, Redis.
 
-Other branches (for example a historical **`Master`** with a different tree, such as a root-level app only) may **not** match this layout. **Do not merge two incompatible roots** without an explicit migration plan. See [**CONTRIBUTING.md**](CONTRIBUTING.md) for branch policy and CI expectations.
+Other branches (for example **`Master`**) may use a **different layout** than `orin-ai/`. **Do not merge incompatible trees** without an explicit migration plan. See [**CONTRIBUTING.md**](CONTRIBUTING.md) for branch policy and CI expectations.
 
 **Docs:** [orin-ai/README.md](orin-ai/README.md) (product overview, API table, setup).
