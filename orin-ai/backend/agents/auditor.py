@@ -70,7 +70,11 @@ def regex_scan(code_files: dict[str, str]) -> list[dict[str, Any]]:
     return violations
 
 
-def llm_security_review(code_files: dict[str, str], regex_violations: list) -> dict[str, Any]:
+def llm_security_review(
+    code_files: dict[str, str],
+    regex_violations: list,
+    messages_history: list[dict] | None = None,
+) -> tuple[dict[str, Any], str]:
     bundle = "\n\n".join(f"=== {fn} ===\n{src[:12000]}" for fn, src in code_files.items())
     system = (
         "You are a security auditor. Review code for: hardcoded secrets, SQL injection, "
@@ -81,8 +85,12 @@ def llm_security_review(code_files: dict[str, str], regex_violations: list) -> d
         f"Regex findings (may include false positives):\n{json.dumps(regex_violations, indent=2)[:8000]}\n\n"
         f"Code:\n{bundle[:100000]}"
     )
-    text = call_agent_llm("auditor", system, user, max_tokens=4096)
-    return parse_json_object(text or "")
+    text = call_agent_llm(
+        "auditor", system, user,
+        messages_history=messages_history,
+        max_tokens=4096,
+    )
+    return parse_json_object(text or ""), user
 
 
 def auditor_node(state: AgentState) -> AgentState:
@@ -102,22 +110,31 @@ def auditor_node(state: AgentState) -> AgentState:
             state["status"] = "FINALIZED"
             return state
 
-        review = llm_security_review(code_files, violations)
+        review, user_message = llm_security_review(
+            code_files, violations,
+            messages_history=state.get("messages", []),
+        )
         state["audit_report"] = {"regex_violations": violations, "llm_review": review}
         clean = bool(review.get("clean"))
         state["audit_passed"] = clean
+
+        # Update message history
+        audit_result = json.dumps({"clean": clean, "violations": review.get("violations", [])})
+        state["messages"] = (state.get("messages", []) + [
+            {"role": "user",      "content": user_message[:2000]},
+            {"role": "assistant", "content": audit_result[:2000]},
+        ])[-12:]
+
         if clean:
             state["status"] = "FINALIZED"
         else:
             state["error_log"].append("auditor: security review failed; remediation required")
-            state["messages"].append(
-                {
-                    "role": "system",
-                    "content": json.dumps(
-                        {"security_remediation": review.get("violations", [])}
-                    )[:12000],
-                }
-            )
+            state["messages"].append({
+                "role": "system",
+                "content": json.dumps(
+                    {"security_remediation": review.get("violations", [])}
+                )[:12000],
+            })
         logfire.info("auditor_result", audit_passed=state["audit_passed"])
     return state
 

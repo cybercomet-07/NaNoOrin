@@ -11,7 +11,7 @@ from state import AgentState, Architecture
 _GEMINI_FLASH = "gemini-2.5-flash-preview-05-20"
 
 
-def generate_architecture(state: AgentState) -> Architecture:
+def generate_architecture(state: AgentState) -> tuple[Architecture, str]:
     system = "You are a senior software architect. Generate a complete technical architecture as JSON."
     user = "\n\n".join(
         [
@@ -27,7 +27,11 @@ def generate_architecture(state: AgentState) -> Architecture:
             ),
         ]
     )
-    text = call_agent_llm("architect", system, user, max_tokens=16384)
+    text = call_agent_llm(
+        "architect", system, user,
+        messages_history=state.get("messages", []),
+        max_tokens=16384,
+    )
     data = parse_json_object(text or "")
     arch = Architecture(
         docker_compose=str(data.get("docker_compose", "")).strip(),
@@ -43,10 +47,16 @@ def generate_architecture(state: AgentState) -> Architecture:
     ):
         if not val:
             raise ValueError(f"Architecture field {field_name!r} is empty or missing")
-    return arch
+    return arch, user
 
 
 def architect_node(state: AgentState) -> AgentState:
     with logfire.span("architect_agent", goal=state["goal"][:50], model=_GEMINI_FLASH):
-        state["architecture"] = generate_architecture(state)
+        arch, user_message = generate_architecture(state)
+        state["architecture"] = arch
+        arch_summary = f"tech_rationale: {arch.tech_rationale[:500]}"
+        state["messages"] = (state.get("messages", []) + [
+            {"role": "user",      "content": user_message[:3000]},
+            {"role": "assistant", "content": arch_summary},
+        ])[-12:]
     return state

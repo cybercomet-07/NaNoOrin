@@ -20,9 +20,6 @@ def _load_supervisor_prompt() -> str:
     return (_PROMPTS / "supervisor.txt").read_text(encoding="utf-8")
 
 
-def _truncate_messages(state: AgentState) -> list[dict]:
-    return state.get("messages", [])[-6:]
-
 
 def _fallback_task_graph() -> list[Task]:
     return [
@@ -90,24 +87,23 @@ def _validate_task_graph(tasks: list[Task]) -> None:
         raise ValueError("Developer task must depend on the Architect task_id")
 
 
-def generate_task_graph(state: AgentState) -> list[Task]:
+def generate_task_graph(state: AgentState) -> tuple[list[Task], str]:
     system = _load_supervisor_prompt()
     ctx = build_agent_context(state)
-    recent = _truncate_messages(state)
-    user_parts = [
+    user_message = "\n\n".join([
         ctx,
         f"Goal: {state['goal']}\n\nGenerate the TaskGraph JSON.",
-    ]
-    if recent:
-        user_parts.append("Recent dialogue (last 6 turns):\n" + json.dumps(recent, indent=2)[:12000])
+    ])
 
-    user_message = "\n\n".join(user_parts)
-
-    text = call_agent_llm("supervisor", system, user_message, max_tokens=8192)
+    text = call_agent_llm(
+        "supervisor", system, user_message,
+        messages_history=state.get("messages", []),
+        max_tokens=8192,
+    )
     rows = parse_json_array(text or "")
     tasks = _tasks_from_payload(rows)
     _validate_task_graph(tasks)
-    return tasks
+    return tasks, user_message
 
 
 def generate_correction_directive(state: AgentState) -> str:
@@ -116,25 +112,32 @@ def generate_correction_directive(state: AgentState) -> str:
         "Produce a short, actionable Correction Directive for the Developer agent."
     )
     errs = state.get("error_log", [])[-3:]
-    recent = _truncate_messages(state)
     user_message = "\n\n".join(
         [
             build_agent_context(state),
             f"Goal: {state['goal']}",
             f"Current task: {state.get('current_task_id', '')}",
             "Last error_log entries:\n" + "\n".join(errs) if errs else "(no errors)",
-            "Recent dialogue (last 6 turns):\n" + json.dumps(recent, indent=2)[:8000] if recent else "",
             "Return a single Correction Directive paragraph (plain text, no JSON).",
         ]
     )
-    out = call_agent_llm("supervisor", system, user_message, max_tokens=2048)
+    out = call_agent_llm(
+        "supervisor", system, user_message,
+        messages_history=state.get("messages", []),
+        max_tokens=2048,
+    )
     return (out or "").strip()
 
 
 def supervisor_node(state: AgentState) -> AgentState:
     with logfire.span("supervisor_agent", goal_preview=state["goal"][:100], model=_GEMINI_FLASH):
         try:
-            tasks = generate_task_graph(state)
+            tasks, user_message = generate_task_graph(state)
+            task_json = json.dumps([t.__dict__ for t in tasks], default=str)
+            state["messages"] = (state.get("messages", []) + [
+                {"role": "user",      "content": user_message[:4000]},
+                {"role": "assistant", "content": task_json[:4000]},
+            ])[-12:]
         except Exception as e:
             logfire.warning("supervisor_task_graph_failed", error=str(e))
             state["error_log"].append(f"supervisor_generate_task_graph: {e}")

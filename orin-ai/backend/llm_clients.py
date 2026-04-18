@@ -1,10 +1,10 @@
 """
-SwarmOS LLM Client Module
-─────────────────────────
-Each agent is assigned its own dedicated API key.
-No two agents share a rate limit quota.
+Orin AI — Shared LLM Client  (GAP-2 / G2.1)
+────────────────────────────────────────────
+Single entry-point for every LLM call in the pipeline.
+Agents MUST use call_agent_llm() — never instantiate OpenAI/Groq clients directly.
 
-Agent → Key mapping:
+Agent → Key mapping (one dedicated key per agent = no shared rate-limit quota):
   supervisor  → GOOGLE_API_KEY_1  (Gemini Flash)
   architect   → GOOGLE_API_KEY_2  (Gemini Flash)
   developer   → GOOGLE_API_KEY_3  (Gemini Flash)
@@ -12,6 +12,10 @@ Agent → Key mapping:
   persona     → GOOGLE_API_KEY_4  (Gemini Flash-Lite)
   auditor     → GOOGLE_API_KEY_4  (Gemini Flash-Lite — runs last, no conflict)
   researcher  → GROQ_API_KEY_1    (Groq Llama 3.3 70B)
+
+Message truncation (Orin plan spec):
+  truncate_messages() enforces the 6-turn window before every LLM call.
+  Without this, long runs silently exceed context windows.
 """
 
 import os
@@ -22,6 +26,22 @@ from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# ── Message truncation (Orin plan: "truncate messages[] to last 6-8 turns") ──
+MAX_HISTORY_TURNS = 6
+
+
+def truncate_messages(messages: list[dict], max_turns: int = MAX_HISTORY_TURNS) -> list[dict]:
+    """
+    Keep only the last N user/assistant pairs from a conversation history.
+    System messages are stripped here — they are always passed separately as system_prompt.
+
+    Without this, long pipeline runs silently exceed context windows causing
+    either API errors or garbage output.
+    """
+    convo = [m for m in messages if m.get("role") in ("user", "assistant")]
+    return convo[-(max_turns * 2):]
+
 
 # ── Model name constants ──────────────────────────────────────────────────────
 GEMINI_FLASH      = "gemini-2.5-flash-preview-05-20"
@@ -97,6 +117,7 @@ def call_agent_llm(
     agent_name: str,
     system_prompt: str,
     user_message: str,
+    messages_history: list[dict] | None = None,
     max_tokens: int = 4096,
     temperature: float = 0.3,
 ) -> str:
@@ -105,18 +126,25 @@ def call_agent_llm(
     Automatically uses the correct API key, client, and model.
 
     Args:
-        agent_name:    One of: supervisor, architect, developer, critic,
-                       persona, auditor, researcher
-        system_prompt: The agent's system-level instructions
-        user_message:  The user/task content for this call
-        max_tokens:    Maximum tokens in response (default 4096)
-        temperature:   Sampling temperature (default 0.3)
+        agent_name:       One of: supervisor, architect, developer, critic,
+                          persona, auditor, researcher
+        system_prompt:    The agent's system-level instructions
+        user_message:     The user/task content for this call
+        messages_history: Optional prior turns from state["messages"].
+                          Truncated to last 6 turns automatically.
+                          Pass None (default) for stateless single-turn calls.
+        max_tokens:       Maximum tokens in response (default 4096)
+        temperature:      Sampling temperature (default 0.3)
 
     Returns:
         str: The model's response content
 
-    Example:
+    Example (stateless):
         result = call_agent_llm("developer", SYSTEM_PROMPT, context)
+
+    Example (with history):
+        result = call_agent_llm("developer", SYSTEM_PROMPT, context,
+                                messages_history=state["messages"])
     """
     if agent_name not in AGENT_CLIENTS:
         raise ValueError(
@@ -127,13 +155,16 @@ def call_agent_llm(
     client = AGENT_CLIENTS[agent_name]
     model  = AGENT_MODELS[agent_name]
 
+    # Build message list: system + truncated history + current user turn
+    history = truncate_messages(messages_history or [])
+    api_messages: list[dict] = [{"role": "system", "content": system_prompt}]
+    api_messages.extend(history)
+    api_messages.append({"role": "user", "content": user_message})
+
     def _call():
         response = client.chat.completions.create(
             model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content": user_message},
-            ],
+            messages=api_messages,
             max_tokens=max_tokens,
             temperature=temperature,
         )

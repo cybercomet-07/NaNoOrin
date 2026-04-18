@@ -14,7 +14,7 @@ from tools.tavily_tools import search_competitors
 _GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
-def run_market_research(state: AgentState) -> tuple[str, str]:
+def run_market_research(state: AgentState) -> tuple[str, str, str]:
     tavily_results = search_competitors(state["goal"])
     system = (
         "You are a market research analyst. Given raw search data, produce a structured competitor analysis."
@@ -26,17 +26,16 @@ def run_market_research(state: AgentState) -> tuple[str, str]:
     )
     text = call_agent_llm("researcher", system, user, max_tokens=2048, temperature=0.2)
     out = strip_code_fences(text or "").strip()
-    print(f"[researcher] used model: {_GROQ_MODEL}")
-    return out, _GROQ_MODEL
+    return out, _GROQ_MODEL, user
 
 
 def researcher_node(state: AgentState) -> AgentState:
-    text, model_used = run_market_research(state)
-    state["research_output"] = text
-    with logfire.span(
-        "researcher_agent",
-        model_used=model_used,
-        goal_preview=state["goal"][:100],
-    ):
-        logfire.info("researcher_complete")
+    with logfire.span("researcher_agent", model_used=_GROQ_MODEL, goal_preview=state["goal"][:100]):
+        text, model_used, user_message = run_market_research(state)
+        state["research_output"] = text
+        state["messages"] = (state.get("messages", []) + [
+            {"role": "user",      "content": user_message[:3000]},
+            {"role": "assistant", "content": text[:3000]},
+        ])[-12:]
+        logfire.info("researcher_complete", model_used=model_used)
     return state

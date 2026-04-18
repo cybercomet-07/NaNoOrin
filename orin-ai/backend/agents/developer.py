@@ -44,7 +44,7 @@ def _build_developer_user_message(state: AgentState) -> str:
     return "\n\n".join(parts)
 
 
-def generate_code(state: AgentState) -> dict[str, str]:
+def generate_code(state: AgentState) -> tuple[dict[str, str], str]:
     mode = get_developer_prompt_mode(state)
     if mode == "panic":
         system = _load_prompt_file("developer_panic.txt")
@@ -69,14 +69,19 @@ def generate_code(state: AgentState) -> dict[str, str]:
             "No markdown fences."
         )
 
-    text = call_agent_llm("developer", system, user, max_tokens=16384)
+    # Pass full message history so developer sees prior error context on retry
+    text = call_agent_llm(
+        "developer", system, user,
+        messages_history=state.get("messages", []),
+        max_tokens=16384,
+    )
     files = parse_json_object(text or "")
 
     if mode != "panic":
         for k in ("app.py", "requirements.txt", "test_app.py"):
             if k not in files:
                 raise ValueError(f"Developer output missing required file {k!r}")
-    return files
+    return files, user
 
 
 def execute_and_test(code_files: dict[str, str], iteration: int) -> TestRun:
@@ -100,7 +105,7 @@ def developer_node(state: AgentState) -> AgentState:
         task_id=state["current_task_id"],
         model=_GEMINI_FLASH,
     ):
-        patch = generate_code(state)
+        patch, user_message = generate_code(state)
         code_files = {**state.get("code_files", {}), **patch}
         for req in ("app.py", "requirements.txt", "test_app.py"):
             if req not in code_files:
@@ -119,4 +124,11 @@ def developer_node(state: AgentState) -> AgentState:
         state["iteration_count"] = next_iter
         if state["iteration_count"] >= 3:
             state["mode"] = "panic"
+
+        # Keep conversation history so retry calls see prior error context
+        test_summary = f"passed={test_run.passed} exit={test_run.exit_code} stderr={test_run.stderr[:300]}"
+        state["messages"] = (state.get("messages", []) + [
+            {"role": "user",      "content": user_message[:3000]},
+            {"role": "assistant", "content": f"[code generated] {test_summary}"},
+        ])[-12:]
     return state

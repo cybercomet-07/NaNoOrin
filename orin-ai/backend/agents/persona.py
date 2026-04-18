@@ -11,7 +11,7 @@ from state import AgentState
 _GEMINI_FLASH_LITE = "gemini-2.5-flash-lite-preview-06-17"
 
 
-def generate_personas(state: AgentState) -> tuple[str, str]:
+def generate_personas(state: AgentState) -> tuple[str, str, str]:
     system = (
         "Generate 3 detailed user personas for this product. For each persona: "
         "name, role, company_size, 3 pain_points[], job_to_be_done, success_metric. "
@@ -22,13 +22,16 @@ def generate_personas(state: AgentState) -> tuple[str, str]:
 
     text = call_agent_llm("persona", system, user)
     out = strip_code_fences(text or "").strip()
-    print(f"[persona] used model: {_GEMINI_FLASH_LITE}")
-    return out, _GEMINI_FLASH_LITE
+    return out, _GEMINI_FLASH_LITE, user
 
 
 def persona_node(state: AgentState) -> AgentState:
-    text, model_used = generate_personas(state)
-    state["personas"] = text
-    with logfire.span("persona_agent", model_used=model_used, goal_preview=state["goal"][:100]):
-        logfire.info("persona_complete")
+    with logfire.span("persona_agent", model_used=_GEMINI_FLASH_LITE, goal_preview=state["goal"][:100]):
+        text, model_used, user_message = generate_personas(state)
+        state["personas"] = text
+        state["messages"] = (state.get("messages", []) + [
+            {"role": "user",      "content": user_message[:3000]},
+            {"role": "assistant", "content": text[:3000]},
+        ])[-12:]
+        logfire.info("persona_complete", model_used=model_used)
     return state
