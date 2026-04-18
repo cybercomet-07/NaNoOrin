@@ -1096,6 +1096,8 @@ def validate_environment():
 Call this at the top of main.py before app initialization.
 ```
 
+**Phase 8 — implemented (Orin AI backend):** The snippets above are the original spec. In the repo today: **8.1** — `main.py` has the global exception handler (including `HTTPException` and `RequestValidationError`), hourly `cleanup_old_runs` with `run_timestamps`, and `add_request_id` middleware; `agents/safe_nodes.py` wraps researcher, persona, and architect only (not developer/critic per plan). **8.2** — `backend/startup_check.py` validates the eight required env vars (including `GOOGLE_API_KEY_1`–`4` and `GROQ_API_KEY_1`); `main.py` runs `validate_environment()` before graph import when `ORIN_SKIP_STARTUP_VALIDATION` is unset, and runs `llm_clients.validate_all_keys()` on FastAPI startup. Tests set `ORIN_SKIP_STARTUP_VALIDATION=1` in `conftest.py`.
+
 ---
 
 ## PHASE 9 — DEMO PREPARATION SCRIPTS
@@ -1220,7 +1222,7 @@ DAY 1 AFTERNOON:
 [ ] PROMPT 3.3 — Persona agent
 [ ] PROMPT 3.4 — Architect agent
 [ ] PROMPT 6.1 — Logfire hardening
-[ ] PROMPT 8.2 — Startup validation
+[x] PROMPT 8.2 — Startup validation
 
 DAY 1 NIGHT (midnight target):
 [ ] PROMPT 7.1 — Integration tests
@@ -1233,7 +1235,7 @@ DAY 2 MORNING:
 [ ] PROMPT 3.7 — Auditor agent
 
 DAY 2 AFTERNOON:
-[ ] PROMPT 8.1 — Error handling hardening
+[x] PROMPT 8.1 — Error handling hardening
 [ ] PROMPT 9.1 — Demo warm-up script
 [ ] PROMPT 9.2 — README
 [ ] Demo rehearsal x3 (PDF Section 13 script — 4 minutes exactly)
