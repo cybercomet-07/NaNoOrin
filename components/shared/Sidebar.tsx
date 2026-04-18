@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "./Logo";
-import { Clock, FileText, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import { Clock, FileText, LayoutDashboard, LogOut, Settings, PanelLeftClose } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BorderGlow from "@/components/BorderGlow";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 interface SidebarProps {
   isVisible: boolean;
+  onToggle: () => void;
 }
 
-export function Sidebar({ isVisible }: SidebarProps) {
+export function Sidebar({ isVisible, onToggle }: SidebarProps) {
   const pathname = usePathname();
 
   const links = [
@@ -28,10 +30,18 @@ export function Sidebar({ isVisible }: SidebarProps) {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: -256, opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="w-64 border-r border-white/5 bg-surface/50 h-screen flex flex-col pt-6 pb-4 fixed z-40"
+          className="w-64 border-r border-white/5 bg-surface/50 h-screen flex flex-col pt-6 pb-4 fixed z-40 group"
         >
-          <div className="px-6 mb-12">
+          <div className="px-6 mb-12 flex items-center justify-between">
             <Logo />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggle}
+              className="h-8 w-8 hover:bg-white/5 text-muted-foreground hover:text-white transition-colors"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </Button>
           </div>
 
           <nav className="flex-1 px-3 space-y-1">

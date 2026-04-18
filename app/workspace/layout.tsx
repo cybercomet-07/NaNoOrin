@@ -11,7 +11,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-background flex text-white selection:bg-primary/30">
-      <Sidebar isVisible={isSidebarOpen} />
+      <Sidebar isVisible={isSidebarOpen} onToggle={() => setIsSidebarOpen(false)} />
       
       <motion.main 
         initial={false}
@@ -21,28 +21,23 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="flex-1 relative min-h-screen"
       >
-        {/* Toggle Button Container */}
-        <motion.div 
-          initial={false}
-          animate={{ 
-            left: isSidebarOpen ? "16.5rem" : "1.5rem" 
-          }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="fixed top-6 z-50 text-white"
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="h-9 w-9 bg-surface/80 backdrop-blur border border-white/10 hover:bg-surface/100 transition-colors shadow-lg shadow-black/20"
+        {/* Toggle Button for OPENING (Only visible when sidebar is closed) */}
+        {!isSidebarOpen && (
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="fixed top-6 left-6 z-50"
           >
-            {isSidebarOpen ? (
-              <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <PanelLeftOpen className="h-4 w-4 text-primary" />
-            )}
-          </Button>
-        </motion.div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarOpen(true)}
+              className="h-10 w-10 bg-surface/80 backdrop-blur border border-white/10 hover:bg-surface/100 transition-colors shadow-lg shadow-black/20"
+            >
+              <PanelLeftOpen className="h-5 w-5 text-primary" />
+            </Button>
+          </motion.div>
+        )}
 
         <div className="p-8">
           <motion.div
