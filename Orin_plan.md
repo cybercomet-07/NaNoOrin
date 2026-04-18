@@ -12,7 +12,7 @@
 Create the exact Orin AI folder structure as specified below. Generate every file as an empty stub with correct imports and a TODO comment. Do not write any logic yet.
 
 Folder structure:
-swarm-os/
+orin-ai/
 ├── backend/
 │   ├── main.py
 │   ├── state.py
