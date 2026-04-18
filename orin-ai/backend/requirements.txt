@@ -11,3 +11,5 @@ sse-starlette
 pydantic
 python-dotenv
 httpx
+pytest
+pytest-asyncio
