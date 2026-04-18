@@ -8,6 +8,7 @@
   width: 100%;
   height: 100%;
   position: relative;
+  z-index: 20;
 }
 
 .orbit-scaling-container--responsive {
@@ -34,6 +35,7 @@
   position: absolute;
   will-change: transform;
   user-select: none;
+  z-index: 20;
 }
 
 .orbit-center-content {

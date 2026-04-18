@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Bot, Code, Cpu, LineChart, Lock, Loader2, ShieldCheck, Zap } from "lucide-react";
 import OrbitImages from "@/components/OrbitImages";
+import { Logo } from "@/components/shared/Logo";
+import SplitText from "@/components/SplitText";
 
 const AGENT_IMAGES = [
   "/agents/scout.png",
@@ -67,22 +69,45 @@ export default function LandingPage() {
               transition={{ duration: 0.8, ease: "easeOut" }}
               className="flex flex-col gap-6"
             >
-              <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm text-primary font-medium w-fit">
-                <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
-                OrinAI v2.0 is live
+              <div className="flex flex-col gap-2">
+                 <SplitText 
+                   text="One Prompt."
+                   tag="h1"
+                   className="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight"
+                   textAlign="left"
+                   delay={50}
+                 />
+                 <div className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight min-h-[1.2em]">
+                    <SplitText 
+                      text="No Human in the Loop."
+                      tag="span"
+                      className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary"
+                      textAlign="left"
+                      delay={100}
+                      overflow="visible"
+                      from={{ opacity: 0, y: 15 }}
+                    />
+                 </div>
+                 <SplitText 
+                   text="Working Code."
+                   tag="h1"
+                   className="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight"
+                   textAlign="left"
+                   delay={150}
+                   from={{ opacity: 0, y: 15 }}
+                 />
               </div>
-              
-              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight">
-                One Prompt. <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
-                  No Human in the Loop.
-                </span> <br />
-                Working Code.
-              </h1>
 
-              <p className="text-lg md:text-xl text-muted max-w-xl">
-                OrinAI deploys intelligent AI agents that research, architect, code, test, and audit your entire project — autonomously.
-              </p>
+              <div className="mt-4">
+                <SplitText 
+                  text="OrinAI deploys intelligent AI agents that research, architect, code, test, and audit your entire project — autonomously."
+                  tag="p"
+                  className="text-lg md:text-xl text-muted max-w-xl"
+                  textAlign="left"
+                  delay={200}
+                  splitType="words"
+                />
+              </div>
 
               <div className="flex items-center gap-6 mt-4 text-sm text-muted font-medium">
                 <div className="flex items-center gap-2">
@@ -178,11 +203,20 @@ export default function LandingPage() {
 
         {/* FEATURES SECTION */}
         <section id="product" className="container mx-auto px-4 md:px-6 py-24 bg-surface/30 border-y border-white/5">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Complete Intelligence</h2>
-            <p className="text-muted max-w-2xl mx-auto text-lg">
-              End-to-end automation from raw idea to deployed infrastructure.
-            </p>
+          <div className="text-center mb-16 flex flex-col items-center gap-4">
+            <SplitText 
+              text="Complete Intelligence"
+              tag="h2"
+              className="text-3xl md:text-5xl font-bold text-white"
+              delay={50}
+            />
+            <SplitText 
+              text="End-to-end automation from raw idea to deployed infrastructure."
+              tag="p"
+              className="text-muted max-w-2xl text-lg"
+              delay={100}
+              splitType="words"
+            />
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -194,13 +228,17 @@ export default function LandingPage() {
               { title: "Security Audit", icon: ShieldCheck, desc: "Sentinel agents review code for vulnerabilities and performance bottlenecks." },
               { title: "Website Generator", icon: Zap, desc: "Instantly deploy a beautiful landing page with our dynamic templates." },
             ].map((feature, i) => (
-              <Card key={i} className="bg-surface/50 hover:bg-surface border-white/5 hover:border-primary/30 transition-all group">
+              <Card key={i} className="bg-surface/50 hover:bg-surface border-white/5 hover:border-primary/30 transition-all group overflow-hidden">
                 <CardHeader>
                   <feature.icon className="h-10 w-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
-                  <CardTitle>{feature.title}</CardTitle>
+                  <CardTitle>
+                    <SplitText text={feature.title} delay={40} textAlign="left" threshold={0.2} />
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-sm">{feature.desc}</CardDescription>
+                  <CardDescription className="text-sm">
+                    {feature.desc}
+                  </CardDescription>
                 </CardContent>
               </Card>
             ))}
@@ -211,10 +249,19 @@ export default function LandingPage() {
         <section className="container mx-auto px-4 md:px-6 py-24">
           <div className="flex flex-col md:flex-row gap-12 items-center">
             <div className="flex-1">
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Meet OrinAI</h2>
-              <p className="text-muted text-lg mb-8">
-                Six specialized AI agents working synchronously to transform your text prompt into a living business.
-              </p>
+              <SplitText 
+                text="Meet OrinAI"
+                tag="h2"
+                className="text-3xl md:text-5xl font-bold text-white mb-6"
+                textAlign="left"
+              />
+              <SplitText 
+                text="Six specialized AI agents working synchronously to transform your text prompt into a living business."
+                className="text-muted text-lg mb-8"
+                textAlign="left"
+                splitType="words"
+                delay={30}
+              />
               <ul className="space-y-4">
                 {[
                   { name: "SCOUT", role: "Market Analyst" },
@@ -231,19 +278,22 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            <div className="flex-1 relative min-h-[500px] flex items-center justify-center">
+            <div className="flex-1 relative min-h-[500px] flex items-center justify-center translate-y-8">
               <OrbitImages
                 images={AGENT_IMAGES}
                 shape="ellipse"
-                radiusX={340}
-                radiusY={100}
-                rotation={-8}
-                duration={30}
-                itemSize={80}
+                radiusX={650}
+                radiusY={130}
+                rotation={-5}
+                duration={35}
+                itemSize={100}
                 responsive={true}
                 fill
+                showPath={true}
+                pathColor="rgba(199,255,61,0.08)"
+                pathWidth={1}
                 centerContent={
-                  <div className="w-24 h-24 rounded-full bg-card border border-primary/50 shadow-[0_0_50px_rgba(199,255,61,0.3)] flex items-center justify-center z-10 scale-125">
+                  <div className="px-8 py-4 rounded-full bg-surface/50 border border-primary/30 shadow-[0_0_50px_rgba(199,255,61,0.2)] backdrop-blur-md flex items-center justify-center z-10 transition-transform hover:scale-105">
                     <Logo />
                   </div>
                 }
@@ -255,8 +305,17 @@ export default function LandingPage() {
         {/* PRICING */}
         <section id="pricing" className="container mx-auto px-4 md:px-6 py-24 bg-surface/30 border-t border-white/5">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Pricing</h2>
-            <p className="text-muted">Simple scalable plans for absolute power.</p>
+            <SplitText 
+              text="Pricing"
+              tag="h2"
+              className="text-3xl md:text-5xl font-bold text-white mb-4"
+            />
+            <SplitText 
+              text="Simple scalable plans for absolute power."
+              className="text-muted"
+              delay={20}
+              splitType="words"
+            />
           </div>
           
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">

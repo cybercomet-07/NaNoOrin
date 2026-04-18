@@ -96,11 +96,6 @@ export default function TerminalPanel({ testResults, events }: Props) {
 
   return (
     <div className="p-3 h-full flex flex-col">
-      <h2 className="font-mono text-xs text-[var(--terminal-gray)] uppercase 
-                     tracking-widest mb-3 shrink-0">
-        Terminal Output
-      </h2>
-      
       <div className="flex-1 overflow-y-auto font-mono text-xs leading-relaxed">
         <div className="text-[var(--terminal-gray)] mb-2">
           Orin AI v1.0 — autonomous pipeline initialized

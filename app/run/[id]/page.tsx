@@ -1,10 +1,10 @@
 "use client"
+import PipelineWorkspace from "@/components/PipelineWorkspace"
+import AgentChat from "@/components/AgentChat"
+import ProcessFlow from "@/components/ProcessFlow"
+import Link from "next/link"
 import { use } from "react"
 import { usePipelineStream } from "@/hooks/usePipelineStream"
-import AgentFeed from "@/components/AgentFeed"
-import TerminalPanel from "@/components/TerminalPanel"
-import ArtifactPanel from "@/components/ArtifactPanel"
-import Link from "next/link"
 
 export default function RunPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: runId } = use(params)
@@ -44,22 +44,29 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
         </div>
       </header>
 
-      {/* 3-panel grid — matches PDF Section 08 layout exactly */}
-      <div className="flex-1 grid grid-cols-3 gap-0 overflow-hidden">
-        {/* Left: Agent Feed */}
-        <div className="border-r border-[var(--terminal-border)] overflow-y-auto">
-          <AgentFeed agentStatuses={agentStatuses} events={events} />
+      {/* Main 2-panel grid */}
+      <div className="flex-1 grid grid-cols-[380px_1fr] gap-0 overflow-hidden">
+        {/* Left: Interactive Agent Chat */}
+        <div className="border-r border-[var(--terminal-border)] overflow-hidden">
+          <AgentChat />
         </div>
         
-        {/* Center: Terminal Output */}
-        <div className="border-r border-[var(--terminal-border)] overflow-hidden flex flex-col">
-          <TerminalPanel testResults={testResults} events={events} />
+        {/* Right: Unified Modular Workspace */}
+        <div className="overflow-hidden">
+          <PipelineWorkspace 
+            events={events}
+            status={status}
+            agentStatuses={agentStatuses}
+            testResults={testResults}
+            codeFiles={codeFiles}
+            runId={runId}
+          />
         </div>
-        
-        {/* Right: Artifacts */}
-        <div className="overflow-hidden flex flex-col">
-          <ArtifactPanel codeFiles={codeFiles} runId={runId} status={status} />
-        </div>
+      </div>
+
+      {/* BOTTOM LAYER: KINETIC PROCESS FLOW */}
+      <div className="shrink-0">
+        <ProcessFlow agentStatuses={agentStatuses} />
       </div>
     </div>
   )
