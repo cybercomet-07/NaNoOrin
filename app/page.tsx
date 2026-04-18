@@ -19,7 +19,7 @@ const AGENT_IMAGES = [
   "/agents/sentinel.png",
 ];
 
-export default function LandingPage() {
+const EXAMPLE_PROMPTS = [
   "Build a FastAPI REST API for a task manager with JWT auth, PostgreSQL, and pytest tests",
   "Build a Python service using fastchroma for vector search with semantic similarity",
   "Build a real-time chat API with WebSockets, user rooms, and message history",
