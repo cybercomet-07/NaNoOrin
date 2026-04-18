@@ -26,12 +26,14 @@ _architect_safe = safe_node_wrapper(architect_node)
 _readme_safe = safe_node_wrapper(readme_node)
 
 
-def supervisor_with_fanout(state: AgentState):
-    """Supervisor runs, then fans out to Researcher AND Persona in parallel."""
-    updated = supervisor_node(state)
+def fan_out_research_and_persona(state: AgentState):
+    """
+    LangGraph 1.x: list[Send] is only valid from conditional edges, not from a node body.
+    Supervisor updates state; this branch fans out to Researcher and Persona in parallel.
+    """
     return [
-        Send("researcher", {**updated, "current_task_id": "research_001"}),
-        Send("persona", {**updated, "current_task_id": "persona_001"}),
+        Send("researcher", {**state, "current_task_id": "research_001"}),
+        Send("persona", {**state, "current_task_id": "persona_001"}),
     ]
 
 
@@ -92,7 +94,7 @@ def end_failed_node(state: AgentState) -> AgentState:
 
 builder = StateGraph(AgentState)
 
-builder.add_node("supervisor", supervisor_with_fanout)
+builder.add_node("supervisor", supervisor_node)
 builder.add_node("researcher", _researcher_safe)
 builder.add_node("persona", _persona_safe)
 builder.add_node("join", join_node)
@@ -105,6 +107,7 @@ builder.add_node("end_success", end_success_node)
 builder.add_node("end_failed", end_failed_node)
 
 builder.add_edge(START, "supervisor")
+builder.add_conditional_edges("supervisor", fan_out_research_and_persona)
 builder.add_edge("researcher", "join")
 builder.add_edge("persona", "join")
 builder.add_edge("join", "architect")
