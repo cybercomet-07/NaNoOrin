@@ -39,12 +39,23 @@ export default function LandingPage() {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Failed to start pipeline");
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const err = await res.json();
+          throw new Error(err.detail || "Failed to start pipeline");
+        } else {
+          const text = await res.text();
+          throw new Error(`Server Error (${res.status}): ${text.slice(0, 50)}...`);
+        }
       }
 
-      const { run_id } = await res.json();
-      router.push(`/run/${run_id}`);
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const { run_id } = await res.json();
+        router.push(`/run/${run_id}`);
+      } else {
+        throw new Error("Invalid response from server (Expected JSON)");
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unknown error");
       setLoading(false);
