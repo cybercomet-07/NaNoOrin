@@ -1,58 +1,140 @@
-# TODO: Phase 3 — Auditor Agent (Security Gate)
-# Reference: execution_plan.md PROMPT 3.7
-# Model: Claude Haiku (claude-haiku-4-5-20251001) — fast and cheap
-# Minimum viable: regex scan (no LLM required for basic demo)
+"""Auditor agent — regex security scan + optional Haiku review."""
 
+from __future__ import annotations
+
+import json
+import os
 import re
+from typing import Any
+
 import logfire
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
+from llm_json import parse_json_object
 from state import AgentState
 
 load_dotenv()
 
-# TODO: initialise Anthropic client (Haiku)
+_HAIKU_MODEL = "claude-haiku-4-5-20251001"
+_client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+
+_SECRET_RE = re.compile(r"[A-Za-z0-9]{32,}")
+_SQL_FSTRING = re.compile(r'f["\'][\s\S]*?SELECT', re.IGNORECASE)
+_EVAL_RE = re.compile(r"\b(eval|exec)\s*\(")
+_ROUTE_RE = re.compile(r"@(?:app|router)\.(?:get|post|put|delete|patch)\s*\(")
 
 
-def regex_scan(code_files: dict[str, str]) -> list[dict]:
-    """
-    Scans all code files as strings for:
-    - Hardcoded secrets (long alphanumeric strings ≥32 chars)
-    - SQL injection (f-string interpolation in queries)
-    - Unsafe eval/exec with user-controlled input
-    - Route definitions missing auth dependency
-    Returns list of {file, line_number, type, severity, snippet}.
-    """
-    # TODO: implement
-    pass
+def regex_scan(code_files: dict[str, str]) -> list[dict[str, Any]]:
+    violations: list[dict[str, Any]] = []
+    for fname, content in code_files.items():
+        lines = content.splitlines()
+        for i, line in enumerate(lines, start=1):
+            for m in _SECRET_RE.findall(line):
+                if m.isdigit() or len(m) < 32:
+                    continue
+                violations.append(
+                    {
+                        "file": fname,
+                        "line_number": i,
+                        "type": "hardcoded_secret",
+                        "severity": "high",
+                        "snippet": line.strip()[:200],
+                    }
+                )
+            if _SQL_FSTRING.search(line):
+                violations.append(
+                    {
+                        "file": fname,
+                        "line_number": i,
+                        "type": "sql_injection_risk",
+                        "severity": "high",
+                        "snippet": line.strip()[:200],
+                    }
+                )
+            if _EVAL_RE.search(line):
+                violations.append(
+                    {
+                        "file": fname,
+                        "line_number": i,
+                        "type": "unsafe_eval_exec",
+                        "severity": "medium",
+                        "snippet": line.strip()[:200],
+                    }
+                )
+            if _ROUTE_RE.search(line) and "Depends" not in line and "# noqa" not in line:
+                violations.append(
+                    {
+                        "file": fname,
+                        "line_number": i,
+                        "type": "missing_auth_dependency",
+                        "severity": "low",
+                        "snippet": line.strip()[:200],
+                    }
+                )
+    return violations
 
 
-def llm_security_review(code_files: dict[str, str], regex_violations: list) -> dict:
-    """
-    Only called when regex_scan finds violations OR time permits.
-    Sends code + regex findings to Claude Haiku.
-    Returns {clean: bool, violations: [{file, line, type, severity}]}.
-    """
-    # TODO: implement
-    pass
+def llm_security_review(code_files: dict[str, str], regex_violations: list) -> dict[str, Any]:
+    bundle = "\n\n".join(f"=== {fn} ===\n{src[:12000]}" for fn, src in code_files.items())
+    system = (
+        "You are a security auditor. Review code for: hardcoded secrets, SQL injection, "
+        "unsafe eval, missing auth. Return JSON: "
+        '{clean: bool, violations: [{file, line, type, severity}]}. No markdown.'
+    )
+    user = (
+        f"Regex findings (may include false positives):\n{json.dumps(regex_violations, indent=2)[:8000]}\n\n"
+        f"Code:\n{bundle[:100000]}"
+    )
+    msg = _client.messages.create(
+        model=_HAIKU_MODEL,
+        max_tokens=4096,
+        system=system,
+        messages=[{"role": "user", "content": user}],
+    )
+    text = ""
+    for block in msg.content:
+        if hasattr(block, "text"):
+            text += block.text
+    return parse_json_object(text)
 
 
 def auditor_node(state: AgentState) -> AgentState:
-    """LangGraph node — regex scan, optional LLM review, sets audit_passed + status."""
-    violations = []  # TODO: call regex_scan(state["code_files"])
-    with logfire.span("auditor_agent",
-                      violations_found=len(violations),
-                      audit_passed=state.get("audit_passed", False),
-                      files_scanned=len(state.get("code_files", {}))):
-        # TODO: if violations → llm_security_review() → re-route to Developer
-        # TODO: if clean → state["audit_passed"] = True, state["status"] = "FINALIZED"
-        pass
+    code_files = state.get("code_files") or {}
+    violations = regex_scan(code_files)
+
+    with logfire.span(
+        "auditor_agent",
+        violations_found=len(violations),
+        audit_passed=state.get("audit_passed", False),
+        files_scanned=len(code_files),
+    ):
+        if not violations:
+            state["audit_report"] = {"regex_violations": [], "llm_review": None}
+            state["audit_passed"] = True
+            state["status"] = "FINALIZED"
+            return state
+
+        review = llm_security_review(code_files, violations)
+        state["audit_report"] = {"regex_violations": violations, "llm_review": review}
+        clean = bool(review.get("clean"))
+        state["audit_passed"] = clean
+        if clean:
+            state["status"] = "FINALIZED"
+        else:
+            state["error_log"].append("auditor: security review failed; remediation required")
+            state["messages"].append(
+                {
+                    "role": "system",
+                    "content": json.dumps(
+                        {"security_remediation": review.get("violations", [])}
+                    )[:12000],
+                }
+            )
     return state
 
 
 def route_after_audit(state: AgentState) -> str:
-    """Returns 'end_success' if audit_passed, else 'developer' for remediation."""
     if state.get("audit_passed"):
         return "end_success"
     return "developer"
