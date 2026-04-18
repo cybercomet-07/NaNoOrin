@@ -32,6 +32,7 @@ export function usePipelineStream(runId: string | null) {
 
     es.onmessage = (e) => {
       try {
+        if (!e.data || e.data.trim() === "") return
         const data: AgentEvent = JSON.parse(e.data)
         
         setEvents(prev => [...prev, data])

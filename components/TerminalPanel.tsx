@@ -29,10 +29,26 @@ export default function TerminalPanel({ testResults, events }: Props) {
     }
     
     if (e.event_type === "agent_complete") {
-      const summary = String(e.payload?.output_summary || "")
+      // Render from whatever keys the backend sends
+      const preview = 
+        e.payload?.output_summary ||
+        e.payload?.stdout_preview ||
+        e.payload?.readme_preview ||
+        e.payload?.architecture ||
+        (e.payload?.audit_passed !== undefined ? `audit ${e.payload.audit_passed ? "passed" : "failed"}` : "") ||
+        (e.payload?.test_passed !== undefined ? `tests ${e.payload.test_passed ? "passed" : "failed"}` : "") ||
+        ""
+      const stderr = e.payload?.stderr_preview ? String(e.payload.stderr_preview) : ""
       return (
-        <div key={i} className="text-[var(--terminal-green)]">
-          [{time}] ✓ {e.agent} complete: {summary.slice(0, 80)}
+        <div key={i}>
+          <div className="text-[var(--terminal-green)]">
+            [{time}] ✓ {e.agent} complete{preview ? `: ${String(preview).slice(0, 80)}` : ""}
+          </div>
+          {stderr && (
+            <pre className="text-[var(--terminal-red)] text-xs mt-1 ml-4 whitespace-pre-wrap opacity-70">
+              {stderr.slice(0, 300)}
+            </pre>
+          )}
         </div>
       )
     }
@@ -62,7 +78,8 @@ export default function TerminalPanel({ testResults, events }: Props) {
     }
     
     if (e.event_type === "status_update") {
-      const status = e.payload?.status as string
+      // Fallback: use event.status if payload.status is missing
+      const status = (e.payload?.status as string) || ((e as unknown as Record<string, unknown>).status as string) || "UNKNOWN"
       const color = status === "FINALIZED" ? "text-[var(--terminal-green)]" :
                     status === "FAILED"    ? "text-[var(--terminal-red)]"   :
                     status === "PANIC"     ? "text-orange-400" :

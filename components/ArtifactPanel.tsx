@@ -20,7 +20,7 @@ export default function ArtifactPanel({ codeFiles, runId, status }: Props) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `swarm-os-${runId.slice(0, 8)}.json`
+    a.download = `orin-ai-${runId.slice(0, 8)}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
