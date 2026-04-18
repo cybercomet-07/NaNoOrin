@@ -8,9 +8,18 @@ import { Footer } from "@/components/shared/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Bot, Code, Cpu, LineChart, Lock, Loader2, ShieldCheck, Zap } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
+import OrbitImages from "@/components/OrbitImages";
 
-const EXAMPLE_PROMPTS = [
+const AGENT_IMAGES = [
+  "/agents/scout.png",
+  "/agents/persona.png",
+  "/agents/blueprint.png",
+  "/agents/forge.png",
+  "/agents/verdict.png",
+  "/agents/sentinel.png",
+];
+
+export default function LandingPage() {
   "Build a FastAPI REST API for a task manager with JWT auth, PostgreSQL, and pytest tests",
   "Build a Python service using fastchroma for vector search with semantic similarity",
   "Build a real-time chat API with WebSockets, user rooms, and message history",
@@ -222,16 +231,23 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            <div className="flex-1 relative aspect-square max-w-md mx-auto">
-              {/* Visual representation of agents connected */}
-              <div className="absolute inset-0 rounded-full border border-white/10 animate-[spin_60s_linear_infinite]" />
-              <div className="absolute inset-4 rounded-full border border-primary/20 animate-[spin_40s_linear_infinite_reverse]" />
-              <div className="absolute inset-8 rounded-full border border-secondary/20 animate-[spin_20s_linear_infinite]" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-20 h-20 rounded-full bg-card border border-primary/50 shadow-[0_0_30px_rgba(199,255,61,0.2)] flex items-center justify-center z-10">
-                  <Logo />
-                </div>
-              </div>
+            <div className="flex-1 relative min-h-[500px] flex items-center justify-center">
+              <OrbitImages
+                images={AGENT_IMAGES}
+                shape="ellipse"
+                radiusX={340}
+                radiusY={100}
+                rotation={-8}
+                duration={30}
+                itemSize={80}
+                responsive={true}
+                fill
+                centerContent={
+                  <div className="w-24 h-24 rounded-full bg-card border border-primary/50 shadow-[0_0_50px_rgba(199,255,61,0.3)] flex items-center justify-center z-10 scale-125">
+                    <Logo />
+                  </div>
+                }
+              />
             </div>
           </div>
         </section>
