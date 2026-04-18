@@ -22,7 +22,14 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
         className="flex-1 relative min-h-screen"
       >
         {/* Toggle Button Container */}
-        <div className="fixed top-6 left-6 z-50">
+        <motion.div 
+          initial={false}
+          animate={{ 
+            left: isSidebarOpen ? "16.5rem" : "1.5rem" 
+          }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="fixed top-6 z-50 text-white"
+        >
           <Button
             variant="ghost"
             size="icon"
@@ -35,7 +42,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
               <PanelLeftOpen className="h-4 w-4 text-primary" />
             )}
           </Button>
-        </div>
+        </motion.div>
 
         <div className="p-8">
           <motion.div
