@@ -12,4 +12,5 @@ pydantic
 python-dotenv
 pytest
 pytest-asyncio
+httpx
 redis[asyncio]

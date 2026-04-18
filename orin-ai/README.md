@@ -1,5 +1,26 @@
 # Orin AI — Autonomous Product Lifecycle Engine
 
+## Repository layout (canonical on `main`)
+
+| Path | Role |
+|------|------|
+| [`backend/`](backend/) | FastAPI service: `POST /run`, `GET /stream/{id}`, `GET /artifacts/{id}`, `GET /health`, etc. |
+| [`frontend/`](frontend/) | Next.js UI (proxies to API per app config). |
+| [`.env.example`](.env.example) | Copy to `backend/.env`; see comments for **required vs optional** keys. |
+| [`docker-compose.yml`](docker-compose.yml) | Local/staging stack: backend + frontend + Redis. |
+
+**Branching:** Treat **`main`** + this **`orin-ai/`** tree as the integrated product unless your team has agreed otherwise. Alternate branch layouts cause merge/rebase conflicts; document any migration in the PR. See the repo root [**CONTRIBUTING.md**](../CONTRIBUTING.md).
+
+## Environments (summary)
+
+| Tier | Typical use | Notes |
+|------|-------------|--------|
+| **Development** | Local `uvicorn --reload`, optional Redis | `ORIN_SKIP_STARTUP_VALIDATION=1` skips strict env checks (also used in CI). |
+| **Staging** | Docker Compose or cloud preview | Real `REDIS_URL`, keys from a secret store; validate startup before demo. |
+| **Production** | Managed deploy | **Unset** `ORIN_SKIP_STARTUP_VALIDATION` so missing keys fail fast; point load balancers at **`GET /health`**. |
+
+Full variable list and semantics: [`.env.example`](.env.example).
+
 ## One line
 
 One prompt. No human in the loop. Working, tested, audited code in under 10 minutes.
