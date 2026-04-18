@@ -20,13 +20,16 @@ def _load_prompt_file(name: str) -> str:
     return (_PROMPTS / name).read_text(encoding="utf-8")
 
 
-def _build_developer_user_message(state: AgentState) -> str:
+def _build_developer_user_message(
+    state: AgentState,
+    correction_directive: str | None = None,
+) -> str:
     """CRITICAL context: goal, full architecture, failures, iteration (per Orin plan)."""
     next_iter = state["iteration_count"] + 1
-    parts: list[str] = [
-        f"=== ITERATION ===\n{next_iter}",
-        build_agent_context(state),
-    ]
+    parts: list[str] = [f"=== ITERATION ===\n{next_iter}"]
+    if correction_directive:
+        parts.append(f"=== SUPERVISOR CORRECTION DIRECTIVE ===\n{correction_directive}")
+    parts.append(build_agent_context(state))
     arch = state.get("architecture")
     if arch:
         parts.append(
@@ -44,19 +47,24 @@ def _build_developer_user_message(state: AgentState) -> str:
     return "\n\n".join(parts)
 
 
-def generate_code(state: AgentState) -> tuple[dict[str, str], str]:
+def generate_code(
+    state: AgentState,
+    correction_directive: str | None = None,
+) -> tuple[dict[str, str], str]:
     mode = get_developer_prompt_mode(state)
     if mode == "panic":
         system = _load_prompt_file("developer_panic.txt")
-        from agents.supervisor import generate_correction_directive
+        if correction_directive is None:
+            from agents.supervisor import generate_correction_directive
 
-        directive = generate_correction_directive(state)
-        extra = f"\n\n=== CORRECTION DIRECTIVE ===\n{directive}"
+            correction_directive = generate_correction_directive(state)
     else:
         system = _load_prompt_file("developer.txt")
-        extra = ""
 
-    user = _build_developer_user_message(state) + extra
+    user = _build_developer_user_message(
+        state,
+        correction_directive=correction_directive if mode == "panic" else None,
+    )
     if mode == "panic":
         user += (
             "\n\nRespond with JSON mapping only filenames you are changing to their full contents. "
@@ -98,6 +106,18 @@ def execute_and_test(code_files: dict[str, str], iteration: int) -> TestRun:
 
 def developer_node(state: AgentState) -> AgentState:
     next_iter = state["iteration_count"] + 1
+
+    correction_directive: str | None = None
+    if state["mode"] == "panic" and state.get("error_log"):
+        from agents.supervisor import generate_correction_directive
+
+        correction_directive = generate_correction_directive(state)
+        logfire.info(
+            "correction_directive_generated",
+            directive_preview=correction_directive[:100],
+            iteration=state["iteration_count"],
+        )
+
     with logfire.span(
         "developer_agent",
         iteration=state["iteration_count"],
@@ -105,7 +125,7 @@ def developer_node(state: AgentState) -> AgentState:
         task_id=state["current_task_id"],
         model=_GEMINI_FLASH,
     ):
-        patch, user_message = generate_code(state)
+        patch, user_message = generate_code(state, correction_directive=correction_directive)
         code_files = {**state.get("code_files", {}), **patch}
         for req in ("app.py", "requirements.txt", "test_app.py"):
             if req not in code_files:

@@ -555,6 +555,8 @@ def developer_node(state: AgentState) -> AgentState:
     # ... rest of developer_node implementation
 ```
 
+**Implemented:** `graph.join_node` fills default JSON for missing `research_output` / `personas`, extends `error_log` with warnings, and logs `join_node_incomplete` / `join_node_complete`. Developer: `developer_node` calls `generate_correction_directive` when `mode == "panic"` and `error_log` is non-empty, logs `correction_directive_generated`, passes text into `generate_code` so only one supervisor call per step; user prompt includes `=== SUPERVISOR CORRECTION DIRECTIVE ===` via `_build_developer_user_message`. Env (`GOOGLE_API_KEY_*`, `GROQ_API_KEY_1`) and `models` unchanged.
+
 ---
 
 ## GAP 5 — README AGENT (DAY 2 TASK FROM PDF)
@@ -1350,7 +1352,7 @@ DAY 1 — CORE ENGINE (priority order from PDF):
 [ ] PROMPT 3.5  — Developer agent  ← USE call_claude from G2.1
 [ ] PROMPT 3.6  — Critic node + routing
 [ ] PROMPT G2.2 — Wire all agents to shared LLM client
-[ ] PROMPT G4.1 — Join node + Correction Directive injection
+[x] PROMPT G4.1 — Join node + Correction Directive injection
 [ ] PROMPT 4.1  — Graph assembly (full wiring)
 [ ] PROMPT 5.1  — FastAPI server
 [ ] PROMPT G1.2 — Redis state persistence

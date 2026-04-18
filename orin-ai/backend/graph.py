@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+
+import logfire
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
@@ -31,7 +34,47 @@ def supervisor_with_fanout(state: AgentState):
 
 
 def join_node(state: AgentState) -> AgentState:
-    """Waits for both Phase 1 agents. Routes to Architect."""
+    """
+    Phase 1 join: LangGraph fan-in waits for Researcher AND Persona.
+    Ensures Architect sees research_output and personas; fills defaults if missing.
+    """
+    issues: list[str] = []
+
+    if not state.get("research_output"):
+        issues.append("WARNING: research_output missing — Architect proceeding without market data")
+        state["research_output"] = json.dumps(
+            {
+                "competitors": [],
+                "pricing": [],
+                "gaps": ["Market research unavailable — proceeding with general knowledge"],
+                "market_size": "Unknown",
+            }
+        )
+
+    if not state.get("personas"):
+        issues.append("WARNING: personas missing — Architect proceeding without user personas")
+        state["personas"] = json.dumps(
+            [
+                {
+                    "name": "Default User",
+                    "role": "Developer",
+                    "company_size": "Startup",
+                    "pain_points": ["Too much manual work"],
+                    "job_to_be_done": "Build software faster",
+                    "success_metric": "Working app in under 10 minutes",
+                }
+            ]
+        )
+
+    if issues:
+        state["error_log"].extend(issues)
+        logfire.warning("join_node_incomplete", issues=issues)
+
+    logfire.info(
+        "join_node_complete",
+        has_research=bool(state.get("research_output")),
+        has_personas=bool(state.get("personas")),
+    )
     return state
 
 
