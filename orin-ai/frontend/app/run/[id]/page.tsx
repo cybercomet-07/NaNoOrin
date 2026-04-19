@@ -6,6 +6,8 @@ import TerminalPanel from "@/components/TerminalPanel"
 import ArtifactPanel from "@/components/ArtifactPanel"
 import Link from "next/link"
 
+import { SnowBackground } from "@/components/shared/SnowBackground"
+
 export default function RunPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: runId } = use(params)
   const { events, status, agentStatuses, testResults, codeFiles, error } =
@@ -20,7 +22,8 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
   }[status] || "text-[var(--terminal-gray)]"
 
   return (
-    <div className="h-screen flex flex-col bg-[#0a0a0a] overflow-hidden">
+    <SnowBackground density={0.05} brightness={0.4} className="h-screen bg-[#050505]">
+      <div className="h-full flex flex-col overflow-hidden backdrop-blur-[2px]">
       {/* Header bar */}
       <header className="flex items-center justify-between px-4 py-2 
                           border-b border-[var(--terminal-border)] shrink-0">
@@ -61,6 +64,7 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
           <ArtifactPanel codeFiles={codeFiles} runId={runId} status={status} />
         </div>
       </div>
-    </div>
+      </div>
+    </SnowBackground>
   )
 }

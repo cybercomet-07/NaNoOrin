@@ -33,9 +33,9 @@ export default function SettingsPage() {
               className={`w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-md transition-colors ${
                 activeTab === tab.id
                   ? tab.id === "danger" 
-                    ? "bg-red-500/10 text-red-500" 
-                    : "bg-surface text-white"
-                  : "text-muted hover:bg-surface/50 hover:text-white"
+                ? "bg-red-500/10 text-red-500 backdrop-blur-sm" 
+                : "bg-surface/60 text-white backdrop-blur-sm shadow-sm"
+              : "text-muted hover:bg-surface/40 hover:text-white transition-all transform hover:scale-[1.02]"
               }`}
             >
               {tab.label}
@@ -46,7 +46,7 @@ export default function SettingsPage() {
         {/* Content area */}
         <div className="flex-1 space-y-6">
           {activeTab === "account" && (
-            <Card>
+            <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-lg shadow-black/20">
               <CardHeader>
                 <CardTitle>Account Details</CardTitle>
                 <CardDescription>Update your personal information.</CardDescription>
@@ -74,7 +74,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "general" && (
-            <Card>
+            <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-lg shadow-black/20">
               <CardHeader>
                 <CardTitle>General Preferences</CardTitle>
                 <CardDescription>Customize your workspace experience.</CardDescription>
@@ -106,7 +106,7 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "billing" && (
-            <Card>
+            <Card className="bg-surface/20 backdrop-blur-md border-white/5 shadow-lg shadow-black/20">
               <CardHeader>
                 <CardTitle>Billing & Plan</CardTitle>
                 <CardDescription>Manage your subscription.</CardDescription>

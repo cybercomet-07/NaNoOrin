@@ -49,7 +49,7 @@ export default function HistoryPage() {
 
       <div className="grid gap-4">
         {HISTORY.map((project) => (
-          <Card key={project.id} className="hover:border-white/20 transition-colors">
+          <Card key={project.id} className="bg-surface/30 backdrop-blur-md border-white/5 hover:border-primary/20 hover:bg-surface/40 transition-all shadow-lg shadow-black/20">
             <CardContent className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-lg bg-surface flex items-center justify-center border border-white/5">

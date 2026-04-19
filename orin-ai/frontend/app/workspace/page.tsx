@@ -37,7 +37,7 @@ export default function WorkspacePage() {
       </div>
 
       <motion.div 
-        className="relative group rounded-2xl bg-surface/50 p-2 border border-white/5 focus-within:border-primary/50 transition-colors shadow-lg backdrop-blur"
+        className="relative group rounded-2xl bg-surface/20 p-2 border border-white/5 focus-within:border-primary/50 transition-all shadow-lg backdrop-blur-md"
         whileHover={{ scale: 1.01 }}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
       >
