@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Bot, Code, Cpu, LineChart, Lock, Loader2, ShieldCheck, Zap } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
+import SplitText from "@/components/SplitText";
 
 const EXAMPLE_PROMPTS = [
   "Build a FastAPI REST API for a task manager with JWT auth, PostgreSQL, and pytest tests",
@@ -79,7 +80,6 @@ export default function LandingPage() {
               transition={{ duration: 0.8, ease: "easeOut" }}
               className="flex flex-col gap-6"
             >
-<<<<<<< HEAD
               <div className="flex flex-col gap-2">
                  <SplitText 
                    text="One Prompt."
@@ -116,25 +116,8 @@ export default function LandingPage() {
                   delay={200}
                   splitType="words"
                 />
-=======
-              <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm text-primary font-medium w-fit">
-                <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
-                OrinAI v2.0 is live
->>>>>>> origin/main
               </div>
               
-              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight">
-                One Prompt. <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
-                  No Human in the Loop.
-                </span> <br />
-                Working Code.
-              </h1>
-              
-              <p className="text-lg md:text-xl text-muted max-w-xl">
-                OrinAI deploys intelligent AI agents that research, architect, code, test, and audit your entire project — autonomously.
-              </p>
-
               <div className="flex items-center gap-6 mt-4 text-sm text-muted font-medium">
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-primary" /> Under 10 Minutes
@@ -198,7 +181,7 @@ export default function LandingPage() {
                       ▶ Run Orin AI
                       <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                     </>
-                  )}
+                  ) }
                 </Button>
 
                 <p className="text-zinc-600 text-xs text-center font-mono">
@@ -245,7 +228,6 @@ export default function LandingPage() {
               { title: "Security Audit", icon: ShieldCheck, desc: "Sentinel agents review code for vulnerabilities and performance bottlenecks." },
               { title: "Website Generator", icon: Zap, desc: "Instantly deploy a beautiful landing page with our dynamic templates." },
             ].map((feature, i) => (
-<<<<<<< HEAD
               <div key={i} className="isometric-card preserve-3d">
                 <Card className="h-full bg-surface/50 border-white/5 brutalist-grid preserve-3d group overflow-visible">
                   <CardHeader className="preserve-3d pb-2">
@@ -263,17 +245,6 @@ export default function LandingPage() {
                   </CardContent>
                 </Card>
               </div>
-=======
-              <Card key={i} className="bg-surface/50 hover:bg-surface border-white/5 hover:border-primary/30 transition-all group">
-                <CardHeader>
-                  <feature.icon className="h-10 w-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
-                  <CardTitle>{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-sm">{feature.desc}</CardDescription>
-                </CardContent>
-              </Card>
->>>>>>> origin/main
             ))}
           </div>
         </section>
