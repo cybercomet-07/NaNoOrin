@@ -35,6 +35,21 @@ export default function ArtifactPanel({ codeFiles, runId, status }: Props) {
 
   return (
     <div className="p-3 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-3 shrink-0">
+        <h2 className="font-mono text-xs text-[var(--terminal-gray)] uppercase tracking-widest">
+          Artifacts ({fileNames.length})
+        </h2>
+        {status === "FINALIZED" && fileNames.length > 0 && (
+          <button
+            onClick={downloadAll}
+            className="font-mono text-xs text-[var(--terminal-green)] 
+                       hover:underline cursor-pointer"
+          >
+            ↓ download all
+          </button>
+        )}
+      </div>
+
       {fileNames.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <p className="font-mono text-xs text-[var(--terminal-gray)] text-center">

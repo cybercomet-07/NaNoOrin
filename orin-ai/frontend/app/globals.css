@@ -20,7 +20,7 @@
   --foreground: #FFFFFF;
   --muted: #A1A1AA;
 
-  /* Terminal tokens */
+  /* Terminal tokens (PDF Section 08 / GAP 6.1) */
   --terminal-bg: #0a0a0a;
   --terminal-border: #1f1f1f;
   --terminal-green: #22c55e;
@@ -31,15 +31,11 @@
   --terminal-text: #d4d4d4;
 }
 
-html {
-  scroll-behavior: smooth;
-  color-scheme: dark;
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
+<<<<<<< HEAD
   min-height: 100vh;
 }
 
@@ -90,4 +86,7 @@ body {
 /* Prevent layout shift from scrollbar */
 html {
   overflow-y: scroll;
+=======
+  color-scheme: dark;
+>>>>>>> origin/main
 }

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "./Logo";
@@ -13,6 +14,18 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isVisible, onToggle }: SidebarProps) {
+=======
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Logo } from "./Logo";
+import { Clock, FileText, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import { cn } from "@/lib/utils";
+import BorderGlow from "@/components/BorderGlow";
+
+export function Sidebar() {
+>>>>>>> origin/main
   const pathname = usePathname();
 
   const links = [
@@ -23,6 +36,7 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
   ];
 
   return (
+<<<<<<< HEAD
     <AnimatePresence mode="wait">
       {isVisible && (
         <motion.aside
@@ -83,10 +97,28 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
               edgeSensitivity={30}
               glowColor="0 100 50"
               backgroundColor="transparent"
+=======
+    <aside className="w-64 border-r border-white/5 bg-surface/50 h-screen flex flex-col pt-6 pb-4 fixed">
+      <div className="px-6 mb-12">
+        <Logo />
+      </div>
+
+      <nav className="flex-1 px-3 space-y-1">
+        {links.map((link) => {
+          const isActive = pathname === link.href || (link.href !== "/workspace" && pathname.startsWith(link.href));
+          return (
+            <BorderGlow
+              key={link.href}
+              className="w-full rounded-md !border-none"
+              edgeSensitivity={30}
+              glowColor="84 100 61"
+              backgroundColor={isActive ? "rgba(199,255,61,0.1)" : "transparent"}
+>>>>>>> origin/main
               borderRadius={6}
               glowRadius={15}
               glowIntensity={1}
               animated={false}
+<<<<<<< HEAD
               colors={['#ef4444', '#f87171', '#fca5a5']}
             >
               <Link
@@ -101,5 +133,48 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
         </motion.aside>
       )}
     </AnimatePresence>
+=======
+              colors={['#c084fc', '#f472b6', '#38bdf8']}
+            >
+              <Link
+                href={link.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all w-full h-full relative z-10",
+                  isActive 
+                    ? "text-primary" 
+                    : "text-muted hover:text-white"
+                )}
+              >
+                <link.icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
+                {link.label}
+              </Link>
+            </BorderGlow>
+          );
+        })}
+      </nav>
+
+      <div className="px-3 mt-auto mb-4">
+        <BorderGlow
+          className="w-full rounded-md !border-none"
+          edgeSensitivity={30}
+          glowColor="0 100 50" // Red glow for logout
+          backgroundColor="transparent"
+          borderRadius={6}
+          glowRadius={15}
+          glowIntensity={1}
+          animated={false}
+          colors={['#ef4444', '#f87171', '#fca5a5']}
+        >
+          <Link
+            href="/"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-red-500 transition-all w-full h-full relative z-10"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Link>
+        </BorderGlow>
+      </div>
+    </aside>
+>>>>>>> origin/main
   );
 }

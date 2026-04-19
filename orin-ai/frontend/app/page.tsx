@@ -8,18 +8,7 @@ import { Footer } from "@/components/shared/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Bot, Code, Cpu, LineChart, Lock, Loader2, ShieldCheck, Zap } from "lucide-react";
-import OrbitImages from "@/components/OrbitImages";
 import { Logo } from "@/components/shared/Logo";
-import SplitText from "@/components/SplitText";
-
-const AGENT_IMAGES = [
-  "/agents/scout.png",
-  "/agents/persona.png",
-  "/agents/blueprint.png",
-  "/agents/forge.png",
-  "/agents/verdict.png",
-  "/agents/sentinel.png",
-];
 
 const EXAMPLE_PROMPTS = [
   "Build a FastAPI REST API for a task manager with JWT auth, PostgreSQL, and pytest tests",
@@ -42,11 +31,32 @@ export default function LandingPage() {
     setLoading(true);
     setError("");
 
-    // SIMULATED BACKEND (Frontend-only mode)
-    setTimeout(() => {
-      const demoId = `demo-${Math.random().toString(36).slice(2, 9)}`;
-      router.push(`/run/${demoId}`);
-    }, 1500);
+    try {
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt.trim() }),
+      });
+
+      const body = await res.json();
+      if (!res.ok) {
+        const detail = body?.detail;
+        const msg =
+          typeof detail === "string"
+            ? detail
+            : Array.isArray(detail)
+              ? detail.map((d: { msg?: string }) => d?.msg || JSON.stringify(d)).join("; ")
+              : body?.error || "Failed to start pipeline";
+        throw new Error(msg);
+      }
+
+      const run_id = body.run_id as string;
+      setLoading(false);
+      router.push(`/run/${run_id}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,6 +79,7 @@ export default function LandingPage() {
               transition={{ duration: 0.8, ease: "easeOut" }}
               className="flex flex-col gap-6"
             >
+<<<<<<< HEAD
               <div className="flex flex-col gap-2">
                  <SplitText 
                    text="One Prompt."
@@ -105,7 +116,24 @@ export default function LandingPage() {
                   delay={200}
                   splitType="words"
                 />
+=======
+              <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm text-primary font-medium w-fit">
+                <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
+                OrinAI v2.0 is live
+>>>>>>> origin/main
               </div>
+              
+              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight">
+                One Prompt. <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
+                  No Human in the Loop.
+                </span> <br />
+                Working Code.
+              </h1>
+              
+              <p className="text-lg md:text-xl text-muted max-w-xl">
+                OrinAI deploys intelligent AI agents that research, architect, code, test, and audit your entire project — autonomously.
+              </p>
 
               <div className="flex items-center gap-6 mt-4 text-sm text-muted font-medium">
                 <div className="flex items-center gap-2">
@@ -201,20 +229,11 @@ export default function LandingPage() {
 
         {/* FEATURES SECTION */}
         <section id="product" className="container mx-auto px-4 md:px-6 py-24 bg-surface/30 border-y border-white/5">
-          <div className="text-center mb-16 flex flex-col items-center gap-4">
-            <SplitText 
-              text="Complete Intelligence"
-              tag="h2"
-              className="text-3xl md:text-5xl font-bold text-white"
-              delay={50}
-            />
-            <SplitText 
-              text="End-to-end automation from raw idea to deployed infrastructure."
-              tag="p"
-              className="text-muted max-w-2xl text-lg"
-              delay={100}
-              splitType="words"
-            />
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Complete Intelligence</h2>
+            <p className="text-muted max-w-2xl mx-auto text-lg">
+              End-to-end automation from raw idea to deployed infrastructure.
+            </p>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 perspective-1000">
@@ -226,6 +245,7 @@ export default function LandingPage() {
               { title: "Security Audit", icon: ShieldCheck, desc: "Sentinel agents review code for vulnerabilities and performance bottlenecks." },
               { title: "Website Generator", icon: Zap, desc: "Instantly deploy a beautiful landing page with our dynamic templates." },
             ].map((feature, i) => (
+<<<<<<< HEAD
               <div key={i} className="isometric-card preserve-3d">
                 <Card className="h-full bg-surface/50 border-white/5 brutalist-grid preserve-3d group overflow-visible">
                   <CardHeader className="preserve-3d pb-2">
@@ -243,6 +263,17 @@ export default function LandingPage() {
                   </CardContent>
                 </Card>
               </div>
+=======
+              <Card key={i} className="bg-surface/50 hover:bg-surface border-white/5 hover:border-primary/30 transition-all group">
+                <CardHeader>
+                  <feature.icon className="h-10 w-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
+                  <CardTitle>{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-sm">{feature.desc}</CardDescription>
+                </CardContent>
+              </Card>
+>>>>>>> origin/main
             ))}
           </div>
         </section>
@@ -250,19 +281,10 @@ export default function LandingPage() {
         <section id="how-it-works" className="container mx-auto px-4 md:px-6 py-24">
           <div id="about" className="flex flex-col md:flex-row gap-12 items-center">
             <div className="flex-1">
-              <SplitText 
-                text="Meet OrinAI"
-                tag="h2"
-                className="text-3xl md:text-5xl font-bold text-white mb-6"
-                textAlign="left"
-              />
-              <SplitText 
-                text="Six specialized AI agents working synchronously to transform your text prompt into a living business."
-                className="text-muted text-lg mb-8"
-                textAlign="left"
-                splitType="words"
-                delay={30}
-              />
+              <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Meet OrinAI</h2>
+              <p className="text-muted text-lg mb-8">
+                Six specialized AI agents working synchronously to transform your text prompt into a living business.
+              </p>
               <ul className="space-y-4">
                 {[
                   { name: "SCOUT", role: "Market Analyst" },
@@ -279,26 +301,16 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            <div className="flex-1 relative min-h-[500px] flex items-center justify-center translate-y-8">
-              <OrbitImages
-                images={AGENT_IMAGES}
-                shape="ellipse"
-                radiusX={650}
-                radiusY={130}
-                rotation={-5}
-                duration={35}
-                itemSize={100}
-                responsive={true}
-                fill
-                showPath={true}
-                pathColor="rgba(199,255,61,0.08)"
-                pathWidth={1}
-                centerContent={
-                  <div className="px-8 py-4 rounded-full bg-surface/50 border border-primary/30 shadow-[0_0_50px_rgba(199,255,61,0.2)] backdrop-blur-md flex items-center justify-center z-10 transition-transform hover:scale-105">
-                    <Logo />
-                  </div>
-                }
-              />
+            <div className="flex-1 relative aspect-square max-w-md mx-auto">
+              {/* Visual representation of agents connected */}
+              <div className="absolute inset-0 rounded-full border border-white/10 animate-[spin_60s_linear_infinite]" />
+              <div className="absolute inset-4 rounded-full border border-primary/20 animate-[spin_40s_linear_infinite_reverse]" />
+              <div className="absolute inset-8 rounded-full border border-secondary/20 animate-[spin_20s_linear_infinite]" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-20 h-20 rounded-full bg-card border border-primary/50 shadow-[0_0_30px_rgba(199,255,61,0.2)] flex items-center justify-center z-10">
+                  <Logo />
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -306,17 +318,8 @@ export default function LandingPage() {
         {/* PRICING */}
         <section id="pricing" className="container mx-auto px-4 md:px-6 py-24 bg-surface/30 border-t border-white/5">
           <div className="text-center mb-16">
-            <SplitText 
-              text="Pricing"
-              tag="h2"
-              className="text-3xl md:text-5xl font-bold text-white mb-4"
-            />
-            <SplitText 
-              text="Simple scalable plans for absolute power."
-              className="text-muted"
-              delay={20}
-              splitType="words"
-            />
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Pricing</h2>
+            <p className="text-muted">Simple scalable plans for absolute power.</p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-12 max-w-6xl mx-auto perspective-1000">

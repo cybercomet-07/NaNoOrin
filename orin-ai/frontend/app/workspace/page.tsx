@@ -9,56 +9,12 @@ import { motion } from "framer-motion";
 
 export default function WorkspacePage() {
   const [prompt, setPrompt] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleGenerate = async () => {
-    if (!prompt.trim() || prompt.length < 10) {
-      setError("Prompt must be at least 10 characters");
-      return;
+  const handleGenerate = () => {
+    if (prompt.trim()) {
+      router.push(`/workspace/processing?prompt=${encodeURIComponent(prompt)}`);
     }
-
-    setLoading(true);
-    setError("");
-
-    // SIMULATED BACKEND (Frontend-only mode)
-    setTimeout(() => {
-      const demoId = `demo-${Math.random().toString(36).slice(2, 9)}`;
-      router.push(`/run/${demoId}`);
-    }, 1500);
-
-/*
-    try {
-      const res = await fetch("/api/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
-      });
-
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const err = await res.json();
-          throw new Error(err.detail || "Failed to start pipeline");
-        } else {
-          const text = await res.text();
-          throw new Error(`Server Error (${res.status}): ${text.slice(0, 50)}...`);
-        }
-      }
-
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const { run_id } = await res.json();
-        router.push(`/run/${run_id}`);
-      } else {
-        throw new Error("Invalid response from server (Expected JSON)");
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      setLoading(false);
-    }
-*/
   };
 
   const setExample = (text: string) => {
@@ -87,41 +43,14 @@ export default function WorkspacePage() {
       >
         <Textarea
           value={prompt}
-          onChange={(e) => {
-            setPrompt(e.target.value);
-            if (error) setError("");
-          }}
-          disabled={loading}
+          onChange={(e) => setPrompt(e.target.value)}
           placeholder="E.g., Build a marketplace for university students to sell textbooks with integrated Stripe payments..."
           className="min-h-[150px] border-none bg-transparent shadow-none focus-visible:ring-0 text-lg resize-none p-4 placeholder:text-muted/60"
         />
-
-        {error && (
-          <div className="px-4 pb-2">
-            <p className="text-red-400 text-sm font-mono flex items-center gap-2">
-              <span>⚠</span> {error}
-            </p>
-          </div>
-        )}
-
         <div className="absolute bottom-6 right-6">
-          <Button 
-            onClick={handleGenerate} 
-            disabled={loading || !prompt.trim()}
-            size="lg" 
-            className="h-12 px-8 shadow-[0_0_20px_rgba(199,255,61,0.2)] group-hover:shadow-[0_0_25px_rgba(199,255,61,0.4)]"
-          >
-            {loading ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                Initializing...
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-5 w-5" />
-                Generate Project
-              </>
-            )}
+          <Button onClick={handleGenerate} size="lg" className="h-12 px-8 shadow-[0_0_20px_rgba(199,255,61,0.2)] group-hover:shadow-[0_0_25px_rgba(199,255,61,0.4)]">
+            <Sparkles className="mr-2 h-5 w-5" />
+            Generate Project
           </Button>
         </div>
       </motion.div>
