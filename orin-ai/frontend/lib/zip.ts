@@ -136,7 +136,13 @@ export function buildZip(files: Record<string, string>): Blob {
   ]);
 
   const buffer = concat([local, central, eocd]);
-  return new Blob([buffer], { type: "application/zip" });
+  // TS 5.x narrows Uint8Array to `Uint8Array<ArrayBufferLike>` which isn't
+  // assignable to `BlobPart`. Copy the bytes into a freshly-typed ArrayBuffer
+  // (guaranteed to be a plain ArrayBuffer, not a SharedArrayBuffer) so the
+  // Blob constructor accepts it on every TS-lib-dom version.
+  const ab = new ArrayBuffer(buffer.byteLength);
+  new Uint8Array(ab).set(buffer);
+  return new Blob([ab], { type: "application/zip" });
 }
 
 export function downloadZip(filename: string, files: Record<string, string>): void {

@@ -19,20 +19,39 @@ jobs:
         working-directory: orin-ai/backend
     env:
       ORIN_SKIP_STARTUP_VALIDATION: "1"
+      # Harmless placeholders so `llm_clients` can be imported during test
+      # collection without a `.env` file present on CI.
+      GROQ_API_KEY_1: "ci-placeholder"
+      GROQ_API_KEY_2: "ci-placeholder"
+      GROQ_API_KEY_3: "ci-placeholder"
+      GROQ_API_KEY_4: "ci-placeholder"
+      TAVILY_API_KEY: "ci-placeholder"
+      E2B_API_KEY: "ci-placeholder"
+      LOGFIRE_TOKEN: "ci-placeholder"
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           cache: pip
           cache-dependency-path: orin-ai/backend/requirements.txt
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip setuptools wheel
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Diagnostics
+        if: always()
+        run: |
+          python --version
+          pip --version
+          pip list
+
       - name: Run tests
-        run: pytest -q
+        run: pytest -q --tb=short
 
   frontend:
     name: Frontend (lint + build)
