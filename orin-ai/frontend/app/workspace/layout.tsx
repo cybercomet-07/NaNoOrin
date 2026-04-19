@@ -2,18 +2,26 @@
 
 import { Sidebar } from "@/components/shared/Sidebar";
 import { motion } from "framer-motion";
-<<<<<<< HEAD
 import { useState } from "react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 import { SnowBackground } from "@/components/shared/SnowBackground";
 
-export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
+export default function WorkspaceLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pathname = usePathname();
 
-  const snowRoutes = ["/workspace", "/workspace/history", "/workspace/report", "/workspace/settings"];
+  const snowRoutes = [
+    "/workspace",
+    "/workspace/history",
+    "/workspace/report",
+    "/workspace/settings",
+  ];
   const shouldShowSnow = snowRoutes.includes(pathname);
 
   const content = (
@@ -31,19 +39,21 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-background flex text-white selection:bg-primary/30">
-      <Sidebar isVisible={isSidebarOpen} onToggle={() => setIsSidebarOpen(false)} />
-      
-      <motion.main 
+      <Sidebar
+        isVisible={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen(false)}
+      />
+
+      <motion.main
         initial={false}
-        animate={{ 
-          paddingLeft: isSidebarOpen ? "16rem" : "0rem" 
+        animate={{
+          paddingLeft: isSidebarOpen ? "16rem" : "0rem",
         }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="flex-1 relative min-h-screen"
       >
-        {/* Toggle Button for OPENING (Only visible when sidebar is closed) */}
         {!isSidebarOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="fixed top-6 left-6 z-50 transition-all"
@@ -65,23 +75,6 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
           content
         )}
       </motion.main>
-=======
-
-export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-background flex text-white selection:bg-primary/30">
-      <Sidebar />
-      <main className="flex-1 ml-64 p-8 relative">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="h-full"
-        >
-          {children}
-        </motion.div>
-      </main>
->>>>>>> origin/main
     </div>
   );
 }

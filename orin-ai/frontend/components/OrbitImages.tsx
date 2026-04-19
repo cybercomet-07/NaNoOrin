@@ -2,7 +2,14 @@
 // https://x.com/dominikkoch
 
 import { useMemo, useEffect, useRef, useState } from 'react';
-import { motion, useMotionValue, useTransform, animate } from 'motion/react';
+import {
+  motion,
+  useMotionValue,
+  useTransform,
+  animate,
+  type MotionValue,
+  type Easing,
+} from 'framer-motion';
 import './OrbitImages.css';
 
 function generateEllipsePath(cx: number, cy: number, rx: number, ry: number) {
@@ -78,7 +85,7 @@ interface OrbitItemProps {
   path: string;
   itemSize: number;
   rotation: number;
-  progress: any;
+  progress: MotionValue<number>;
   fill: boolean;
 }
 
@@ -213,7 +220,7 @@ export default function OrbitImages({
     if (paused) return;
     const controls = animate(progress, direction === 'reverse' ? -100 : 100, {
       duration,
-      ease: easing as any,
+      ease: easing as Easing,
       repeat: Infinity,
       repeatType: 'loop',
     });

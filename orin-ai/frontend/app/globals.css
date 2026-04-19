@@ -15,10 +15,10 @@
   --background: #050505;
   --surface: #111111;
   --card: #161616;
-  --primary: #C7FF3D;
-  --secondary: #00D4FF;
-  --foreground: #FFFFFF;
-  --muted: #A1A1AA;
+  --primary: #c7ff3d;
+  --secondary: #00d4ff;
+  --foreground: #ffffff;
+  --muted: #a1a1aa;
 
   /* Terminal tokens (PDF Section 08 / GAP 6.1) */
   --terminal-bg: #0a0a0a;
@@ -35,8 +35,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
-<<<<<<< HEAD
   min-height: 100vh;
+  color-scheme: dark;
 }
 
 /* Perspective and 3D utilities */
@@ -50,8 +50,13 @@ body {
 
 /* Obsidian Brutalist Utility */
 .brutalist-grid {
-  background: linear-gradient(135deg, rgba(199,255,61,0.05) 18.75%, rgba(5,5,5,0.1) 0 31.25%, transparent 0),
-              repeating-linear-gradient(45deg, rgba(20,20,20,0.8) -6.25% 6.25%, rgba(5,5,5,1) 0 18.75%);
+  background:
+    linear-gradient(135deg, rgba(199, 255, 61, 0.05) 18.75%, rgba(5, 5, 5, 0.1) 0 31.25%, transparent 0),
+    repeating-linear-gradient(
+      45deg,
+      rgba(20, 20, 20, 0.8) -6.25% 6.25%,
+      rgba(5, 5, 5, 1) 0 18.75%
+    );
   background-size: 40px 40px;
   background-position: 0 0;
   transition: background-position 0.5s ease-in-out;
@@ -68,25 +73,37 @@ body {
 .isometric-card:hover {
   transform: rotate3d(0.5, 1, 0, 15deg);
   border-color: var(--primary) !important;
-  box-shadow: 0 20px 40px -10px rgba(199,255,61,0.15);
+  box-shadow: 0 20px 40px -10px rgba(199, 255, 61, 0.15);
 }
 
-.translate-z-10 { transform: translate3d(0, 0, 10px); }
-.translate-z-20 { transform: translate3d(0, 0, 20px); }
-.translate-z-30 { transform: translate3d(0, 0, 30px); }
-.translate-z-40 { transform: translate3d(0, 0, 40px); }
-.translate-z-50 { transform: translate3d(0, 0, 50px); }
-.translate-z-80 { transform: translate3d(0, 0, 80px); }
+.translate-z-10 {
+  transform: translate3d(0, 0, 10px);
+}
+.translate-z-20 {
+  transform: translate3d(0, 0, 20px);
+}
+.translate-z-30 {
+  transform: translate3d(0, 0, 30px);
+}
+.translate-z-40 {
+  transform: translate3d(0, 0, 40px);
+}
+.translate-z-50 {
+  transform: translate3d(0, 0, 50px);
+}
+.translate-z-80 {
+  transform: translate3d(0, 0, 80px);
+}
 
 /* Ensure smooth transitions for interactive elements */
 * {
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 /* Prevent layout shift from scrollbar */
 html {
   overflow-y: scroll;
-=======
-  color-scheme: dark;
->>>>>>> origin/main
 }

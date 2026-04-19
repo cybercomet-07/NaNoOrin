@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { AgentEvent } from "@/hooks/usePipelineStream"
 import ArtifactPanel from "./ArtifactPanel"
 import { motion, AnimatePresence } from "framer-motion"
@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion"
 interface Props {
   events: AgentEvent[]
   status: string
-  agentStatuses: any
+  agentStatuses: Record<string, unknown>
   testResults: AgentEvent[]
   codeFiles: Record<string, string>
   runId: string
@@ -30,20 +30,24 @@ const OrinIcon = ({ type }: { type: Tab }) => (
   </div>
 );
 
-export default function PipelineWorkspace({
-  events,
-  status,
-  agentStatuses,
-  testResults,
-  codeFiles,
-  runId
-}: Props) {
+export default function PipelineWorkspace({ events, status, codeFiles, runId }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("PREVIEW")
+  const [nowMs, setNowMs] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (status === "FINALIZED") return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [status]);
 
   // Generate period calculation (total events duration)
   const startTime = events.length > 0 ? new Date(events[0].timestamp).getTime() : 0;
   const lastTime = events.length > 0 ? new Date(events[events.length - 1].timestamp).getTime() : 0;
-  const elapsedSec = startTime ? Math.floor((status === "FINALIZED" ? (lastTime - startTime) : (Date.now() - startTime)) / 1000) : 0;
+  const elapsedSec = startTime
+    ? Math.floor(
+        (status === "FINALIZED" ? lastTime - startTime : nowMs - startTime) / 1000
+      )
+    : 0;
 
   return (
     <div className="h-full flex flex-col bg-transparent relative overflow-hidden backdrop-blur-[1px]">
