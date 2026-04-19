@@ -1,20 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "./Logo";
 import {
   Clock,
   FileText,
   LayoutDashboard,
   LogOut,
+  Network,
   Settings,
+  Sparkles,
   PanelLeftClose,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BorderGlow from "@/components/BorderGlow";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarProps {
   isVisible: boolean;
@@ -23,9 +26,18 @@ interface SidebarProps {
 
 export function Sidebar({ isVisible, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { session, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/");
+  };
 
   const links = [
+    { href: "/workspace/demo", label: "Demo Prompts", icon: Sparkles },
     { href: "/workspace", label: "New Run", icon: LayoutDashboard },
+    { href: "/workspace/architecture", label: "Architecture", icon: Network },
     { href: "/workspace/history", label: "History", icon: Clock },
     { href: "/workspace/report", label: "Reports", icon: FileText },
     { href: "/workspace/settings", label: "Settings", icon: Settings },
@@ -93,7 +105,15 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
             })}
           </nav>
 
-          <div className="px-3 mt-auto mb-4">
+          <div className="px-3 mt-auto mb-4 space-y-2">
+            {session && (
+              <div className="px-3 py-2 rounded-md border border-white/5 bg-surface/50 text-xs font-mono">
+                <div className="text-[var(--terminal-gray)] uppercase tracking-widest text-[10px] mb-0.5">
+                  Signed in
+                </div>
+                <div className="text-white/90 truncate">{session.email}</div>
+              </div>
+            )}
             <BorderGlow
               className="w-full rounded-md !border-none"
               edgeSensitivity={30}
@@ -105,13 +125,14 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
               animated={false}
               colors={["#ef4444", "#f87171", "#fca5a5"]}
             >
-              <Link
-                href="/"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-red-500 transition-all w-full h-full relative z-10"
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-red-500 transition-all w-full h-full relative z-10 text-left"
               >
                 <LogOut className="h-4 w-4" />
                 Logout
-              </Link>
+              </button>
             </BorderGlow>
           </div>
         </motion.aside>

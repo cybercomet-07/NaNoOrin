@@ -94,15 +94,16 @@ def generate_code(
             "No markdown fences."
         )
 
-    # Short history + capped message bodies — Groq tier limits total request tokens (~12k TPM on some orgs).
+    # 8B-instant has a 30k TPM on free tier — plenty of headroom for a single call.
+    # Keep output reasonable (full JSON fits in ~2500 tokens for small demo prompts).
     text = call_agent_llm(
         "developer",
         system,
         user,
         messages_history=state.get("messages", []),
-        max_tokens=8192,
-        max_history_turns=3,
-        max_history_content_chars=1200,
+        max_tokens=3072,
+        max_history_turns=2,
+        max_history_content_chars=800,
     )
     files = parse_json_object(text or "")
     files = {str(k): str(v) for k, v in files.items()}

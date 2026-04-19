@@ -51,7 +51,9 @@ def generate_architecture(state: AgentState) -> tuple[Architecture, str]:
     text = call_agent_llm(
         "architect", system, user,
         messages_history=state.get("messages", []),
-        max_tokens=8192,
+        max_tokens=2048,
+        max_history_turns=2,
+        max_history_content_chars=600,
     )
     data = parse_json_object(text or "")
     arch = Architecture(

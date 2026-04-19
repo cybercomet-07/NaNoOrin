@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { AgentEvent } from "@/hooks/usePipelineStream"
 import ArtifactPanel from "./ArtifactPanel"
 import { motion, AnimatePresence } from "framer-motion"
+import ReactMarkdown from "react-markdown"
 
 interface Props {
   events: AgentEvent[]
@@ -33,6 +34,16 @@ const OrinIcon = ({ type }: { type: Tab }) => (
 export default function PipelineWorkspace({ events, status, codeFiles, runId }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("PREVIEW")
   const [nowMs, setNowMs] = useState(() => Date.now())
+  const [originalPrompt, setOriginalPrompt] = useState<string | null>(null)
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(`orin:prompt:${runId}`)
+      setOriginalPrompt(stored ?? null)
+    } catch {
+      setOriginalPrompt(null)
+    }
+  }, [runId])
 
   useEffect(() => {
     if (status === "FINALIZED") return;
@@ -87,7 +98,26 @@ export default function PipelineWorkspace({ events, status, codeFiles, runId }: 
             className="h-full w-full"
           >
             {activeTab === "PREVIEW" && (
-              <div className="p-12 h-full flex flex-col items-center justify-center">
+              <div className="p-8 md:p-12 h-full overflow-y-auto">
+                {status === "FINALIZED" && codeFiles["README.md"] ? (
+                  <div className="max-w-3xl mx-auto bg-surface/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                      <div>
+                        <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">
+                          Generated README
+                        </div>
+                        <h2 className="text-2xl font-bold text-white">{`Your project is ready`}</h2>
+                      </div>
+                      <span className="font-mono text-[10px] text-[var(--terminal-green)]">
+                        ✓ {Object.keys(codeFiles).length} files
+                      </span>
+                    </div>
+                    <article className="orin-markdown text-white/80 text-sm leading-relaxed">
+                      <ReactMarkdown>{codeFiles["README.md"]}</ReactMarkdown>
+                    </article>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center">
                 {/* LARGE RECTANGULAR STAT BOARD */}
                 <div className="w-full max-w-2xl bg-surface/40 backdrop-blur-xl border border-white/10 rounded-2xl p-10 relative overflow-hidden group shadow-2xl">
                   {/* Decorative corner glow */}
@@ -138,13 +168,15 @@ export default function PipelineWorkspace({ events, status, codeFiles, runId }: 
                     </div>
                   </div>
                 </div>
+                </div>
+                )}
               </div>
             )}
 
             {activeTab === "CODE" && (
               <div className="p-8 h-full flex flex-col items-center">
                  <div className="w-full h-full max-w-5xl bg-surface/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 relative overflow-hidden flex flex-col shadow-2xl">
-                    <ArtifactPanel codeFiles={codeFiles} runId={runId} status={status} />
+                    <ArtifactPanel codeFiles={codeFiles} runId={runId} status={status} prompt={originalPrompt} />
                  </div>
               </div>
             )}

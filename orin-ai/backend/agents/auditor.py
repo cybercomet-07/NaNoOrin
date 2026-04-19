@@ -115,7 +115,7 @@ def llm_security_review(
         system,
         user,
         messages_history=messages_history,
-        max_tokens=4096,
+        max_tokens=2048,
     )
     return parse_json_object(text or ""), user
 

@@ -1,46 +1,18 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Navbar } from "@/components/shared/Navbar";
-import { Footer } from "@/components/shared/Footer";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Bot, Code, Cpu, LineChart, Lock, Loader2, ShieldCheck, Zap } from "lucide-react";
-import { Logo } from "@/components/shared/Logo";
-import SplitText from "@/components/SplitText";
-import { startPipelineRun } from "@/lib/pipeline";
-
-const EXAMPLE_PROMPTS = [
-  "Build a FastAPI REST API for a task manager with JWT auth, PostgreSQL, and pytest tests",
-  "Build a Python service using fastchroma for vector search with semantic similarity",
-  "Build a real-time chat API with WebSockets, user rooms, and message history",
-];
+import Link from "next/link"
+import { motion } from "framer-motion"
+import { Navbar } from "@/components/shared/Navbar"
+import { Footer } from "@/components/shared/Footer"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ArrowRight, Bot, Code, Cpu, LineChart, Lock, ShieldCheck, Zap } from "lucide-react"
+import { Logo } from "@/components/shared/Logo"
+import SplitText from "@/components/SplitText"
 
 export default function LandingPage() {
-  const [prompt, setPrompt] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
-
-  const startPipeline = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const runId = await startPipelineRun(prompt);
-      setLoading(false);
-      router.push(`/run/${runId}`);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background relative selection:bg-primary/30 selection:text-white">
-      {/* Background Effects */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]" />
         <div className="absolute top-[20%] right-[-10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[120px]" />
@@ -49,7 +21,7 @@ export default function LandingPage() {
       <Navbar />
 
       <main className="relative z-10">
-        {/* HERO + PROMPT SECTION */}
+        {/* HERO */}
         <section className="container mx-auto px-4 md:px-6 pt-24 pb-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <motion.div
@@ -101,7 +73,7 @@ export default function LandingPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-6 mt-4 text-sm text-muted font-medium">
+              <div className="flex items-center gap-6 mt-2 text-sm text-muted font-medium">
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-primary" /> Under 10 Minutes
                 </div>
@@ -112,9 +84,23 @@ export default function LandingPage() {
                   <Lock className="h-4 w-4 text-primary" /> Secure & Audited
                 </div>
               </div>
+
+              <div className="flex flex-wrap gap-3 mt-4">
+                <Link href="/login">
+                  <Button size="lg" className="h-12 px-6 text-base font-bold">
+                    Get Started Free
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="#how-it-works">
+                  <Button size="lg" variant="outline" className="h-12 px-6 text-base">
+                    How It Works
+                  </Button>
+                </Link>
+              </div>
             </motion.div>
 
-            {/* RIGHT: PROMPT INPUT */}
+            {/* RIGHT: Demo preview card */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -123,70 +109,33 @@ export default function LandingPage() {
             >
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-primary/20 via-transparent to-secondary/20 blur-xl" />
               <div className="relative rounded-2xl border border-white/10 bg-surface/50 p-6 backdrop-blur-md shadow-2xl shadow-black flex flex-col gap-4">
-                {/* Terminal header */}
                 <div className="flex items-center gap-2 px-1">
                   <div className="w-3 h-3 rounded-full bg-red-500/80" />
                   <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
                   <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                  <span className="text-xs text-muted font-mono ml-2">orin — prompt_engine</span>
+                  <span className="text-xs text-muted font-mono ml-2">orin — demo preview</span>
                 </div>
 
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Describe what you want to build..."
-                  rows={5}
-                  className="w-full bg-[#0a0a0a] border border-white/10 rounded-lg p-4 
-                             text-white font-mono text-sm resize-none
-                             focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30
-                             placeholder:text-zinc-600 transition-all"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) startPipeline();
-                  }}
-                />
+                <div className="rounded-lg border border-white/10 bg-[#0a0a0a] p-4 font-mono text-xs space-y-1">
+                  <p className="text-[var(--terminal-gray)]">$ orin run</p>
+                  <p className="text-[var(--terminal-yellow)]">▶ Supervisor planning…</p>
+                  <p className="text-[var(--terminal-green)]">✓ Researcher complete</p>
+                  <p className="text-[var(--terminal-green)]">✓ Architect complete</p>
+                  <p className="text-[var(--terminal-green)]">✓ Developer complete — tests passed</p>
+                  <p className="text-[var(--terminal-green)]">✓ Auditor complete</p>
+                  <p className="text-primary font-bold">═══ PIPELINE FINALIZED ═══</p>
+                </div>
 
-                {error && (
-                  <p className="text-red-400 text-sm font-mono">⚠ {error}</p>
-                )}
-
-                <Button
-                  onClick={startPipeline}
-                  disabled={loading || !prompt.trim()}
-                  className="w-full h-12 text-base font-bold group"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Starting Orin AI...
-                    </>
-                  ) : (
-                    <>
-                      ▶ Run Orin AI
+                <div className="border-t border-white/5 pt-4">
+                  <p className="text-muted text-sm mb-3">
+                    Sign in to try a curated demo prompt that finishes within free-tier token limits.
+                  </p>
+                  <Link href="/login?next=%2Fworkspace%2Fdemo">
+                    <Button className="w-full h-11 text-base font-bold group">
+                      See Demo Prompts
                       <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </Button>
-
-                <p className="text-zinc-600 text-xs text-center font-mono">
-                  ⌘ + Enter to run
-                </p>
-
-                {/* Example Prompts */}
-                <div className="border-t border-white/5 pt-4 mt-1">
-                  <p className="text-zinc-600 text-xs font-mono mb-3">— example prompts —</p>
-                  <div className="space-y-2">
-                    {EXAMPLE_PROMPTS.map((p, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setPrompt(p)}
-                        className="w-full text-left text-xs font-mono text-zinc-500 
-                                   hover:text-white p-2 rounded border 
-                                   border-transparent hover:border-white/10 hover:bg-white/5 transition-all"
-                      >
-                        › {p}
-                      </button>
-                    ))}
-                  </div>
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </motion.div>
@@ -201,15 +150,15 @@ export default function LandingPage() {
               End-to-end automation from raw idea to deployed infrastructure.
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 perspective-1000">
             {[
               { title: "Market Research", icon: LineChart, desc: "Instant viable analysis of competitors, TAM, and target demographics." },
               { title: "AI Personas", icon: Bot, desc: "Synthesized synthetic users to battle-test your product before launch." },
               { title: "Architecture Builder", icon: Cpu, desc: "Scalable backend schemas and API route mapping automatically." },
-              { title: "Full Code Generation", icon: Code, desc: "Production-ready React/Next.js frontend and Node backend code." },
+              { title: "Full Code Generation", icon: Code, desc: "Production-ready FastAPI backend code generated from one prompt." },
               { title: "Security Audit", icon: ShieldCheck, desc: "Sentinel agents review code for vulnerabilities and performance bottlenecks." },
-              { title: "Website Generator", icon: Zap, desc: "Instantly deploy a beautiful landing page with our dynamic templates." },
+              { title: "Live Test Loop", icon: Zap, desc: "E2B sandbox runs pytest on every iteration until all tests pass." },
             ].map((feature, i) => (
               <div key={i} className="isometric-card preserve-3d">
                 <Card className="h-full bg-surface/50 border-white/5 brutalist-grid preserve-3d group overflow-visible">
@@ -232,23 +181,66 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* HOW IT WORKS */}
         <section id="how-it-works" className="container mx-auto px-4 md:px-6 py-24">
-          <div id="about" className="flex flex-col md:flex-row gap-12 items-center">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">How It Works</h2>
+            <p className="text-muted max-w-2xl mx-auto text-lg">
+              Three steps — zero hand-holding.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {[
+              {
+                step: "01",
+                title: "Pick a demo prompt",
+                desc: "Start from a curated small prompt that fits in the free-tier token budget.",
+              },
+              {
+                step: "02",
+                title: "Agents work live",
+                desc: "Supervisor, Researcher, Architect, Developer, Critic, and Auditor run in parallel on your behalf.",
+              },
+              {
+                step: "03",
+                title: "Code + preview",
+                desc: "Flip between PREVIEW and CODE to see the generated app and its files.",
+              },
+            ].map((s) => (
+              <div
+                key={s.step}
+                className="rounded-2xl border border-white/10 bg-surface/40 p-6 backdrop-blur-md"
+              >
+                <div className="font-mono text-xs text-primary mb-3">STEP {s.step}</div>
+                <h3 className="text-xl font-bold text-white mb-2">{s.title}</h3>
+                <p className="text-muted text-sm leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* AGENTS */}
+        <section id="about" className="container mx-auto px-4 md:px-6 py-24">
+          <div className="flex flex-col md:flex-row gap-12 items-center">
             <div className="flex-1">
               <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Meet OrinAI</h2>
               <p className="text-muted text-lg mb-8">
-                Six specialized AI agents working synchronously to transform your text prompt into a living business.
+                Seven specialized AI agents working together to transform your text prompt into working code.
               </p>
               <ul className="space-y-4">
                 {[
-                  { name: "SCOUT", role: "Market Analyst" },
-                  { name: "PERSONA", role: "UX / Simulator" },
-                  { name: "BLUEPRINT", role: "Systems Architect" },
-                  { name: "FORGE", role: "Lead Developer" },
-                  { name: "VERDICT", role: "QA Engineer" },
-                  { name: "SENTINEL", role: "Security & DevOps" },
+                  { name: "SUPERVISOR", role: "Orchestrator & task planner" },
+                  { name: "RESEARCHER", role: "Market & library research via Tavily" },
+                  { name: "PERSONA", role: "Synthetic user scenarios" },
+                  { name: "ARCHITECT", role: "Systems & API design" },
+                  { name: "DEVELOPER", role: "Code writer + E2B test runner" },
+                  { name: "CRITIC", role: "Test-result evaluator" },
+                  { name: "AUDITOR", role: "Security & correctness review" },
                 ].map((agent, i) => (
-                  <li key={i} className="flex items-center gap-4 p-3 rounded-lg border border-white/5 bg-surface/50">
+                  <li
+                    key={i}
+                    className="flex items-center gap-4 p-3 rounded-lg border border-white/5 bg-surface/50"
+                  >
                     <span className="font-mono text-primary font-bold">{agent.name}</span>
                     <span className="text-white/60 text-sm">— {agent.role}</span>
                   </li>
@@ -256,7 +248,6 @@ export default function LandingPage() {
               </ul>
             </div>
             <div className="flex-1 relative aspect-square max-w-md mx-auto">
-              {/* Visual representation of agents connected */}
               <div className="absolute inset-0 rounded-full border border-white/10 animate-[spin_60s_linear_infinite]" />
               <div className="absolute inset-4 rounded-full border border-primary/20 animate-[spin_40s_linear_infinite_reverse]" />
               <div className="absolute inset-8 rounded-full border border-secondary/20 animate-[spin_20s_linear_infinite]" />
@@ -269,83 +260,26 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* PRICING */}
-        <section id="pricing" className="container mx-auto px-4 md:px-6 py-24 bg-surface/30 border-t border-white/5">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Pricing</h2>
-            <p className="text-muted">Simple scalable plans for absolute power.</p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-12 max-w-6xl mx-auto perspective-1000">
-            {/* Free */}
-            <div className="isometric-card preserve-3d">
-              <Card className="bg-surface border-white/10 brutalist-grid preserve-3d h-full overflow-visible">
-                <CardHeader className="preserve-3d pt-8">
-                  <CardTitle className="text-xl translate-z-40">Free</CardTitle>
-                  <div className="text-4xl font-bold text-white mt-4 translate-z-50">$0</div>
-                </CardHeader>
-                <CardContent className="space-y-4 preserve-3d">
-                  <ul className="space-y-2 text-sm text-white/70 translate-z-20 pb-6">
-                    <li className="flex items-center gap-2">✓ 1 Project generation/mo</li>
-                    <li className="flex items-center gap-2">✓ Basic market report</li>
-                    <li className="flex items-center gap-2">✓ Shared infrastructure</li>
-                  </ul>
-                  <div className="translate-z-30">
-                    <Button variant="outline" className="w-full">Get Started</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Pro */}
-            <div className="isometric-card preserve-3d">
-              <Card className="bg-card border-primary relative shadow-[0_0_40px_rgba(199,255,61,0.1)] brutalist-grid preserve-3d h-full overflow-visible border-2">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-black text-xs font-bold px-3 py-1 rounded-full uppercase translate-z-80 shadow-lg whitespace-nowrap z-20">
-                  Most Popular
-                </div>
-                <CardHeader className="preserve-3d pt-10">
-                  <CardTitle className="text-xl translate-z-40">Pro</CardTitle>
-                  <div className="text-4xl font-bold text-white mt-4 translate-z-50">$49<span className="text-lg text-muted font-normal">/mo</span></div>
-                </CardHeader>
-                <CardContent className="space-y-4 preserve-3d">
-                  <ul className="space-y-2 text-sm text-white translate-z-20 pb-6">
-                    <li className="flex items-center gap-2 text-primary font-semibold">✓ 50 Project generations/mo</li>
-                    <li className="flex items-center gap-2">✓ Advanced codebase access</li>
-                    <li className="flex items-center gap-2">✓ 1-Click website deployments</li>
-                    <li className="flex items-center gap-2">✓ Full architectural specs</li>
-                  </ul>
-                  <div className="translate-z-30">
-                    <Button className="w-full">Subscribe</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Enterprise */}
-            <div className="isometric-card preserve-3d">
-              <Card className="bg-surface border-white/10 brutalist-grid preserve-3d h-full overflow-visible">
-                <CardHeader className="preserve-3d pt-8">
-                  <CardTitle className="text-xl translate-z-40">Enterprise</CardTitle>
-                  <div className="text-4xl font-bold text-white mt-4 translate-z-50">$299<span className="text-lg text-muted font-normal">/mo</span></div>
-                </CardHeader>
-                <CardContent className="space-y-4 preserve-3d">
-                  <ul className="space-y-2 text-sm text-white/70 translate-z-20 pb-6">
-                    <li className="flex items-center gap-2">✓ Unlimited generations</li>
-                    <li className="flex items-center gap-2">✓ Custom API integrations</li>
-                    <li className="flex items-center gap-2">✓ Dedicated Sentinel clusters</li>
-                  </ul>
-                  <div className="translate-z-30">
-                    <Button variant="outline" className="w-full">Contact Sales</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+        {/* CTA strip */}
+        <section className="container mx-auto px-4 md:px-6 py-20">
+          <div className="rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 via-transparent to-secondary/10 p-10 text-center">
+            <h3 className="text-2xl md:text-4xl font-bold text-white mb-4">
+              Ready to see the agents in action?
+            </h3>
+            <p className="text-muted mb-6">
+              Create a free account, pick a demo prompt, and watch the pipeline run live.
+            </p>
+            <Link href="/login">
+              <Button size="lg" className="h-12 px-8 text-base font-bold">
+                Start Free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </section>
-
       </main>
-      
+
       <Footer />
     </div>
-  );
+  )
 }

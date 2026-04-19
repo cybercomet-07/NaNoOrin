@@ -96,7 +96,7 @@ def generate_task_graph(state: AgentState) -> tuple[list[Task], str]:
     text = call_agent_llm(
         "supervisor", system, user_message,
         messages_history=state.get("messages", []),
-        max_tokens=8192,
+        max_tokens=2048,
     )
     rows = parse_json_array(text or "")
     tasks = _tasks_from_payload(rows)

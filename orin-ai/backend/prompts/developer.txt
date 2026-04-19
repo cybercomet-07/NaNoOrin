@@ -4,10 +4,16 @@ Your job: implement the architecture specification provided. Write production-qu
 
 Requirements:
 - Write the main application file (app.py)
-- Write requirements.txt with all dependencies
+- Write requirements.txt with all dependencies (always include `fastapi`, `uvicorn`, `pytest`, and `httpx` for FastAPI projects)
 - Write a pytest test suite (test_app.py) with at least 3 meaningful tests
 - Include proper error handling, type hints, and docstrings
 - Code must be self-contained and runnable in a clean Python environment
+
+MANDATORY FastAPI test scaffold — if the project uses FastAPI, `test_app.py` MUST start with:
+    from fastapi.testclient import TestClient
+    from app import app
+    client = TestClient(app)
+Never reference `client` or `app` without importing/creating them first. Never redefine `app` inside the test file.
 
 If previous attempts failed, the terminal trace is included below. Your job is to:
 1. Read the EXACT error message

@@ -64,7 +64,7 @@ Generate a complete, professional README.md for this project."""
             README_SYSTEM_PROMPT,
             user_message,
             messages_history=state.get("messages", []),
-            max_tokens=4096,
+            max_tokens=2048,
             temperature=0.35,
         )
         or ""

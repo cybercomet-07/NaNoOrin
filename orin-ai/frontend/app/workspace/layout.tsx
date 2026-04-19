@@ -7,6 +7,7 @@ import { PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 import { SnowBackground } from "@/components/shared/SnowBackground";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function WorkspaceLayout({
   children,
@@ -18,6 +19,8 @@ export default function WorkspaceLayout({
 
   const snowRoutes = [
     "/workspace",
+    "/workspace/demo",
+    "/workspace/architecture",
     "/workspace/history",
     "/workspace/report",
     "/workspace/settings",
@@ -38,6 +41,7 @@ export default function WorkspaceLayout({
   );
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-background flex text-white selection:bg-primary/30">
       <Sidebar
         isVisible={isSidebarOpen}
@@ -76,5 +80,6 @@ export default function WorkspaceLayout({
         )}
       </motion.main>
     </div>
+    </AuthGuard>
   );
 }

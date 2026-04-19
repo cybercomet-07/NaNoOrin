@@ -109,17 +109,16 @@ export function usePipelineStream(runId: string | null) {
                 (data.payload?.final_status as string | undefined)) ?? ""
           if (newStatus) setStatus(newStatus)
           
-          // Fetch artifacts when finalized
-          if (newStatus === "FINALIZED") {
+          // Fetch whatever artifacts exist — backend returns partial files on
+          // FAILED/PANIC runs too, which lets the Code tab show partial output
+          // instead of a blank "No files" state.
+          if (["FINALIZED", "FAILED", "PANIC"].includes(newStatus)) {
             fetch(`/api/artifacts/${runId}`)
               .then(r => r.json())
               .then((d: { files?: Record<string, string> }) =>
                 setCodeFiles(d.files ?? {}),
               )
               .catch(console.error)
-          }
-
-          if (["FINALIZED", "FAILED", "PANIC"].includes(newStatus)) {
             es.close()
           }
         }

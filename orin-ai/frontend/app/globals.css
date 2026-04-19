@@ -95,6 +95,98 @@ body {
   transform: translate3d(0, 0, 80px);
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.orin-markdown h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 1.25rem 0 0.75rem;
+  line-height: 1.2;
+}
+.orin-markdown h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 1.25rem 0 0.5rem;
+}
+.orin-markdown h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 1rem 0 0.5rem;
+}
+.orin-markdown p {
+  margin: 0.5rem 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+.orin-markdown a {
+  color: var(--primary, #c7ff3d);
+  text-decoration: underline;
+}
+.orin-markdown ul,
+.orin-markdown ol {
+  margin: 0.5rem 0 0.75rem 1.25rem;
+  padding-left: 1rem;
+}
+.orin-markdown ul { list-style: disc; }
+.orin-markdown ol { list-style: decimal; }
+.orin-markdown li { margin: 0.25rem 0; }
+.orin-markdown code {
+  font-family: var(--font-mono, ui-monospace, Menlo, monospace);
+  font-size: 0.85em;
+  color: var(--primary, #c7ff3d);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+.orin-markdown pre {
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  font-size: 0.8rem;
+}
+.orin-markdown pre code {
+  background: transparent;
+  color: #e5e5e5;
+  padding: 0;
+}
+.orin-markdown blockquote {
+  border-left: 3px solid var(--primary, #c7ff3d);
+  margin: 0.75rem 0;
+  padding-left: 0.9rem;
+  color: rgba(255, 255, 255, 0.65);
+  font-style: italic;
+}
+.orin-markdown hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 1.25rem 0;
+}
+.orin-markdown strong { color: #fff; }
+.orin-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.85rem;
+}
+.orin-markdown th,
+.orin-markdown td {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+.orin-markdown th { background: rgba(255, 255, 255, 0.03); color: #fff; }
+
 /* Ensure smooth transitions for interactive elements */
 * {
   transition:

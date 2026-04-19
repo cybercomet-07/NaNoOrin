@@ -19,6 +19,11 @@ export default function WorkspacePage() {
     setError("");
     try {
       const runId = await startPipelineRun(prompt);
+      try {
+        sessionStorage.setItem(`orin:prompt:${runId}`, prompt);
+      } catch {
+        // ignore — sessionStorage may be disabled
+      }
       setLoading(false);
       router.push(`/run/${runId}`);
     } catch (err: unknown) {
