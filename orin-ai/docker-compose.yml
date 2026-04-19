@@ -13,6 +13,18 @@ services:
     volumes:
       - ./backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 25s
     depends_on:
       - redis
     restart: unless-stopped
@@ -27,10 +39,11 @@ services:
       # Set FRONTEND_HOST_PORT=3001 if 3000 is already in use (see run-demo.sh)
       - "${FRONTEND_HOST_PORT:-3000}:3000"
     environment:
-      # Used at `next build` via Dockerfile ARG BACKEND_URL (same value). Browser calls /api/* → rewrites to backend.
+      # Must match build-time BACKEND_URL above (Next rewrites are resolved at build in Docker)
       - BACKEND_URL=http://backend:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
   redis:

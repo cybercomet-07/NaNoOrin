@@ -9,6 +9,22 @@
 | [`.env.example`](.env.example) | Copy to `backend/.env`; see comments for **required vs optional** keys. |
 | [`docker-compose.yml`](docker-compose.yml) | Local/staging stack: backend + frontend + Redis. |
 
+### Frontend ↔ backend (Docker & production)
+
+The UI calls **same-origin** `/api/*`. Next.js **rewrites** those to the FastAPI base URL:
+
+| Where you run | Set `BACKEND_URL` | Notes |
+|-----------------|-------------------|--------|
+| `npm run dev` (frontend) + API on host | Default `http://127.0.0.1:8000` | Or `frontend/.env.local`: `BACKEND_URL=...` |
+| `docker compose` | **`http://backend:8000`** | Passed as Dockerfile `ARG` at **build** time and must match the Compose service name. **Do not** use `localhost` here — inside the frontend container, localhost is not the API. |
+
+Production checklist:
+
+1. Fill **`orin-ai/.env`** with real keys; **unset** `ORIN_SKIP_STARTUP_VALIDATION` so bad config fails fast.
+2. Set **`ALLOWED_ORIGINS`** to your public UI origin(s) (comma-separated) for browsers that call the API directly (e.g. tools); same-origin UI via Next rewrites still works without it.
+3. Rebuild the frontend image when changing API URL: `docker compose build --no-cache frontend`.
+4. Prefer **HTTPS** termination at your load balancer; keep Redis and internal URLs on private networks.
+
 **Branching:** Treat **`main`** + this **`orin-ai/`** tree as the integrated product unless your team has agreed otherwise. Alternate branch layouts cause merge/rebase conflicts; document any migration in the PR. See the repo root [**CONTRIBUTING.md**](../CONTRIBUTING.md).
 
 ## Environments (summary)

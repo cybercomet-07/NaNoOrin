@@ -38,12 +38,20 @@ export default function LandingPage() {
         body: JSON.stringify({ prompt: prompt.trim() }),
       });
 
+      const body = await res.json();
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Failed to start pipeline");
+        const detail = body?.detail;
+        const msg =
+          typeof detail === "string"
+            ? detail
+            : Array.isArray(detail)
+              ? detail.map((d: { msg?: string }) => d?.msg || JSON.stringify(d)).join("; ")
+              : body?.error || "Failed to start pipeline";
+        throw new Error(msg);
       }
 
-      const { run_id } = await res.json();
+      const run_id = body.run_id as string;
+      setLoading(false);
       router.push(`/run/${run_id}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unknown error");
