@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Bot, Code, Cpu, LineChart, Lock, Loader2, ShieldCheck, Zap } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import SplitText from "@/components/SplitText";
+import PixelSnow from "@/components/PixelSnow";
 
 const EXAMPLE_PROMPTS = [
   "Build a FastAPI REST API for a task manager with JWT auth, PostgreSQL, and pytest tests",
@@ -62,6 +63,17 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background relative selection:bg-primary/30 selection:text-white">
+      {/* Cinematic Kinetic Background */}
+      <div className="fixed inset-0 z-0 opacity-40">
+        <PixelSnow 
+          variant="snowflake"
+          flakeSize={0.005}
+          pixelResolution={180}
+          brightness={0.8}
+          speed={0.8}
+        />
+      </div>
+
       {/* Background Effects */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]" />
@@ -109,12 +121,12 @@ export default function LandingPage() {
 
               <div className="mt-4">
                 <SplitText 
-                  text="OrinAI deploys intelligent AI agents that research, architect, code, test, and audit your entire project — autonomously."
-                  tag="p"
-                  className="text-lg md:text-xl text-muted max-w-xl"
-                  textAlign="left"
-                  delay={200}
-                  splitType="words"
+                   text="OrinAI deploys intelligent AI agents that research, architect, code, test, and audit your entire project — autonomously."
+                   tag="p"
+                   className="text-lg md:text-xl text-muted max-w-xl"
+                   textAlign="left"
+                   delay={200}
+                   splitType="words"
                 />
               </div>
               
