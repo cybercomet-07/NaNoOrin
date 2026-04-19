@@ -14,7 +14,17 @@ const STATUS_ICONS: Record<string, string> = {
   FAILED:  "✗",
 }
 
-const AGENT_ORDER = ["Supervisor", "Researcher", "Persona", "Architect", "Developer", "Critic", "Auditor", "Readme"]
+const AGENT_ORDER = [
+  "Supervisor",
+  "Researcher",
+  "Persona",
+  "Coordinator",
+  "Architect",
+  "Developer",
+  "Critic",
+  "Auditor",
+  "Readme",
+]
 
 interface Props {
   agentStatuses: Record<string, AgentStatus>

@@ -4,16 +4,26 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot, Sparkles, Zap } from "lucide-react";
+import { Bot, Sparkles, Zap, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { startPipelineRun } from "@/lib/pipeline";
 
 export default function WorkspacePage() {
   const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleGenerate = () => {
-    if (prompt.trim()) {
-      router.push(`/workspace/processing?prompt=${encodeURIComponent(prompt)}`);
+  const handleGenerate = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const runId = await startPipelineRun(prompt);
+      setLoading(false);
+      router.push(`/run/${runId}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+      setLoading(false);
     }
   };
 
@@ -23,7 +33,7 @@ export default function WorkspacePage() {
 
   return (
     <div className="h-full flex flex-col max-w-4xl mx-auto pt-16">
-      
+
       <div className="mb-12 text-center">
         <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-6 border border-primary/20 shadow-[0_0_30px_rgba(199,255,61,0.15)]">
           <Bot className="h-8 w-8 text-primary" />
@@ -36,7 +46,7 @@ export default function WorkspacePage() {
         </p>
       </div>
 
-      <motion.div 
+      <motion.div
         className="relative group rounded-2xl bg-surface/20 p-2 border border-white/5 focus-within:border-primary/50 transition-all shadow-lg backdrop-blur-md"
         whileHover={{ scale: 1.01 }}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -46,26 +56,54 @@ export default function WorkspacePage() {
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="E.g., Build a marketplace for university students to sell textbooks with integrated Stripe payments..."
           className="min-h-[150px] border-none bg-transparent shadow-none focus-visible:ring-0 text-lg resize-none p-4 placeholder:text-muted/60"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              void handleGenerate();
+            }
+          }}
         />
+        {error && (
+          <p className="px-4 pb-2 text-red-400 text-sm font-mono">⚠ {error}</p>
+        )}
         <div className="absolute bottom-6 right-6">
-          <Button onClick={handleGenerate} size="lg" className="h-12 px-8 shadow-[0_0_20px_rgba(199,255,61,0.2)] group-hover:shadow-[0_0_25px_rgba(199,255,61,0.4)]">
-            <Sparkles className="mr-2 h-5 w-5" />
-            Generate Project
+          <Button
+            onClick={() => void handleGenerate()}
+            disabled={loading || !prompt.trim()}
+            size="lg"
+            className="h-12 px-8 shadow-[0_0_20px_rgba(199,255,61,0.2)] group-hover:shadow-[0_0_25px_rgba(199,255,61,0.4)]"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Starting…
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-5 w-5" />
+                Generate Project
+              </>
+            )}
           </Button>
         </div>
       </motion.div>
+
+      <p className="mt-3 text-center text-zinc-600 text-xs font-mono">
+        ⌘ / Ctrl + Enter to run
+      </p>
 
       <div className="mt-8">
         <h3 className="text-sm font-medium text-muted mb-4 uppercase tracking-wider">Suggested Prompts</h3>
         <div className="flex flex-wrap gap-3">
           {[
-            "Build an AI healthcare SaaS for patient triaging",
-            "Create a fintech app for teenagers tracking allowances",
-            "Build a crypto portfolio tracker with real-time alerts",
-            "Create an HR platform for automated hiring flows"
+            "Build an AI healthcare SaaS for patient triaging with HIPAA-aware logging and audit trails",
+            "Create a fintech app for teenagers tracking allowances with Plaid and parental controls",
+            "Build a crypto portfolio tracker with real-time alerts and CSV export",
+            "Create an HR platform for automated hiring flows with interview scheduling",
           ].map((example, i) => (
             <button
               key={i}
+              type="button"
               onClick={() => setExample(example)}
               className="inline-flex items-center rounded-full bg-white/5 border border-white/10 px-4 py-2 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors"
             >

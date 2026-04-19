@@ -1,6 +1,32 @@
 "use client"
 import { useState, useEffect, useCallback } from "react"
 
+function previewFromAgentPayload(payload: Record<string, unknown> | undefined): string {
+  if (!payload) return ""
+  const pick = (...keys: string[]) => {
+    for (const k of keys) {
+      const v = payload[k]
+      if (typeof v === "string" && v.trim()) return v.slice(0, 220)
+    }
+    return ""
+  }
+  const fromStrings = pick(
+    "output_summary",
+    "stdout_preview",
+    "tech_rationale",
+    "readme_preview",
+    "stdout",
+  )
+  if (fromStrings) return fromStrings
+  if (typeof payload.audit_passed === "boolean") {
+    return `audit ${payload.audit_passed ? "passed" : "failed"}`
+  }
+  if (typeof payload.test_passed === "boolean") {
+    return `tests ${payload.test_passed ? "passed" : "failed"}`
+  }
+  return ""
+}
+
 export interface AgentEvent {
   event_type: "agent_start" | "agent_complete" | "test_result" | "status_update"
   agent: string
@@ -36,7 +62,8 @@ export function usePipelineStream(runId: string | null) {
       try {
         if (!e.data || e.data.trim() === "") return
         const data: AgentEvent = JSON.parse(e.data)
-        
+        setError(null)
+
         setEvents(prev => [...prev, data])
         
         // Update agent status cards
@@ -48,12 +75,15 @@ export function usePipelineStream(runId: string | null) {
         }
         
         if (data.event_type === "agent_complete") {
+          const p = data.payload as Record<string, unknown> | undefined
           setAgentStatuses(prev => ({
             ...prev,
             [data.agent]: {
               ...prev[data.agent],
+              name: data.agent,
               status: "PASSED",
-              lastOutput: String(data.payload?.output_summary || "")
+              iteration: data.iteration,
+              lastOutput: previewFromAgentPayload(p),
             }
           }))
         }
@@ -83,11 +113,13 @@ export function usePipelineStream(runId: string | null) {
           if (newStatus === "FINALIZED") {
             fetch(`/api/artifacts/${runId}`)
               .then(r => r.json())
-              .then(d => setCodeFiles(d.files || {}))
+              .then((d: { files?: Record<string, string> }) =>
+                setCodeFiles(d.files ?? {}),
+              )
               .catch(console.error)
           }
-          
-          if (["FINALIZED", "FAILED"].includes(newStatus)) {
+
+          if (["FINALIZED", "FAILED", "PANIC"].includes(newStatus)) {
             es.close()
           }
         }

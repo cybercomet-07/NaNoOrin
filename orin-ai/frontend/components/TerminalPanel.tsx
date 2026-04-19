@@ -78,8 +78,12 @@ export default function TerminalPanel({ testResults, events }: Props) {
     }
     
     if (e.event_type === "status_update") {
-      // Fallback: use event.status if payload.status is missing
-      const status = (e.payload?.status as string) || ((e as unknown as Record<string, unknown>).status as string) || "UNKNOWN"
+      const status =
+        (typeof e.status === "string" && e.status
+          ? e.status
+          : (e.payload?.status as string | undefined)) ||
+        (e.payload?.final_status as string | undefined) ||
+        "UNKNOWN"
       const color = status === "FINALIZED" ? "text-[var(--terminal-green)]" :
                     status === "FAILED"    ? "text-[var(--terminal-red)]"   :
                     status === "PANIC"     ? "text-orange-400" :

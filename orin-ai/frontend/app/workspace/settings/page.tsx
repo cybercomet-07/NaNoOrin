@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Logo } from "@/components/shared/Logo";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("account");

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Bot, Code, Cpu, LineChart, Lock, Loader2, ShieldCheck, Zap } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import SplitText from "@/components/SplitText";
+import { startPipelineRun } from "@/lib/pipeline";
 
 const EXAMPLE_PROMPTS = [
   "Build a FastAPI REST API for a task manager with JWT auth, PostgreSQL, and pytest tests",
@@ -24,36 +25,13 @@ export default function LandingPage() {
   const router = useRouter();
 
   const startPipeline = async () => {
-    if (!prompt.trim() || prompt.length < 10) {
-      setError("Prompt must be at least 10 characters");
-      return;
-    }
-
     setLoading(true);
     setError("");
 
     try {
-      const res = await fetch("/api/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
-      });
-
-      const body = await res.json();
-      if (!res.ok) {
-        const detail = body?.detail;
-        const msg =
-          typeof detail === "string"
-            ? detail
-            : Array.isArray(detail)
-              ? detail.map((d: { msg?: string }) => d?.msg || JSON.stringify(d)).join("; ")
-              : body?.error || "Failed to start pipeline";
-        throw new Error(msg);
-      }
-
-      const run_id = body.run_id as string;
+      const runId = await startPipelineRun(prompt);
       setLoading(false);
-      router.push(`/run/${run_id}`);
+      router.push(`/run/${runId}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unknown error");
       setLoading(false);
