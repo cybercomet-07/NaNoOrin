@@ -20,6 +20,15 @@ export interface Session {
 const USERS_KEY = "orin:users"
 const SESSION_KEY = "orin:session"
 
+/**
+ * Built-in demo credentials. These are seeded on first load of the app so the
+ * demo account is always present, even after a fresh install or localStorage
+ * reset. Safe to share publicly — this account only exists in the user's
+ * browser; there is no real backend auth behind it.
+ */
+export const DEMO_EMAIL = "demo@orin.ai"
+export const DEMO_PASSWORD = "Orin@Demo2026"
+
 function isBrowser(): boolean {
   return typeof window !== "undefined" && typeof localStorage !== "undefined"
 }
@@ -142,4 +151,26 @@ export function logOut(): void {
 
 export function isAuthenticated(): boolean {
   return getSession() !== null
+}
+
+/**
+ * Idempotent. Makes sure the demo account is registered in localStorage so
+ * judges can always log in with the advertised credentials. Safe to call on
+ * every page load — it only writes if the user isn't already present.
+ */
+export async function ensureDemoAccount(): Promise<void> {
+  if (!isBrowser()) return
+  const users = readUsers()
+  if (users.some((u) => u.email === DEMO_EMAIL)) return
+  try {
+    const hash = await sha256(DEMO_PASSWORD)
+    users.push({
+      email: DEMO_EMAIL,
+      passwordHash: hash,
+      createdAt: new Date().toISOString(),
+    })
+    writeUsers(users)
+  } catch {
+    // If Web Crypto is unavailable, skip silently — demo auth is non-critical.
+  }
 }

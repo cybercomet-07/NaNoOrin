@@ -214,8 +214,10 @@ from llm_clients import validate_all_keys
 validate_all_keys()
 
 from diagram import router as diagram_router
+from analyzer import router as analyzer_router
 
 app.include_router(diagram_router)
+app.include_router(analyzer_router)
 
 
 def _normalize_status(raw: str) -> _StatusLiteral:

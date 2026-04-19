@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "./Logo";
 import {
   Clock,
+  FileSearch,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -38,6 +39,7 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
     { href: "/workspace/demo", label: "Demo Prompts", icon: Sparkles },
     { href: "/workspace", label: "New Run", icon: LayoutDashboard },
     { href: "/workspace/architecture", label: "Architecture", icon: Network },
+    { href: "/workspace/analyze", label: "Analyzer", icon: FileSearch },
     { href: "/workspace/history", label: "History", icon: Clock },
     { href: "/workspace/report", label: "Reports", icon: FileText },
     { href: "/workspace/settings", label: "Settings", icon: Settings },
@@ -51,9 +53,9 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: -256, opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="w-64 border-r border-white/5 bg-transparent backdrop-blur-[2px] h-screen flex flex-col pt-6 fixed inset-y-0 left-0 z-40 group"
+          className="w-64 border-r border-white/5 bg-[#050505]/40 backdrop-blur-[2px] h-screen pt-6 fixed inset-y-0 left-0 z-40 group overflow-hidden"
         >
-          <div className="shrink-0 px-6 mb-8 flex items-center justify-between">
+          <div className="absolute inset-x-0 top-0 px-6 pt-6 pb-4 flex items-center justify-between bg-transparent z-20">
             <Logo />
             <Button
               variant="ghost"
@@ -65,7 +67,7 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
             </Button>
           </div>
 
-          <nav className="flex-1 min-h-0 overflow-y-auto px-3 space-y-1">
+          <nav className="absolute inset-x-0 top-[72px] bottom-[116px] overflow-y-auto px-3 py-2 space-y-1 scrollbar-thin">
             {links.map((link) => {
               const isActive =
                 pathname === link.href ||
@@ -105,7 +107,7 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
             })}
           </nav>
 
-          <div className="shrink-0 px-3 pt-4 pb-2 mt-auto space-y-2 border-t border-white/5 bg-[#050505]/60 backdrop-blur-sm">
+          <div className="absolute inset-x-0 bottom-0 px-3 pt-3 pb-3 space-y-2 border-t border-white/5 bg-[#050505]/80 backdrop-blur-md z-20">
             {session && (
               <div className="px-3 py-2 rounded-md border border-white/5 bg-surface/50 text-xs font-mono">
                 <div className="text-[var(--terminal-gray)] uppercase tracking-widest text-[10px] mb-0.5">

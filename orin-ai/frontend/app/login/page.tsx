@@ -7,8 +7,14 @@ import { Input } from "@/components/ui/input"
 import { Logo } from "@/components/shared/Logo"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Loader2 } from "lucide-react"
-import { logIn, signUp } from "@/lib/auth"
+import { Check, Copy, Loader2, Sparkles } from "lucide-react"
+import {
+  DEMO_EMAIL,
+  DEMO_PASSWORD,
+  ensureDemoAccount,
+  logIn,
+  signUp,
+} from "@/lib/auth"
 import { useAuth } from "@/hooks/useAuth"
 
 function AuthPageInner() {
@@ -18,6 +24,7 @@ function AuthPageInner() {
   const [confirm, setConfirm] = useState("")
   const [error, setError] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [copied, setCopied] = useState<"email" | "password" | null>(null)
 
   const router = useRouter()
   const params = useSearchParams()
@@ -26,10 +33,56 @@ function AuthPageInner() {
   const next = params.get("next") || "/workspace/demo"
 
   useEffect(() => {
+    ensureDemoAccount()
+  }, [])
+
+  useEffect(() => {
     if (ready && isAuthenticated) {
       router.replace(next)
     }
   }, [ready, isAuthenticated, next, router])
+
+  const fillDemoCredentials = () => {
+    setEmail(DEMO_EMAIL)
+    setPassword(DEMO_PASSWORD)
+    setConfirm(DEMO_PASSWORD)
+    setIsLogin(true)
+    setError("")
+  }
+
+  const copyToClipboard = async (
+    text: string,
+    which: "email" | "password",
+  ) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(which)
+      window.setTimeout(
+        () => setCopied((c) => (c === which ? null : c)),
+        1200,
+      )
+    } catch {
+      // ignore
+    }
+  }
+
+  const loginAsDemo = async () => {
+    setError("")
+    setSubmitting(true)
+    try {
+      await ensureDemoAccount()
+      const result = await logIn(DEMO_EMAIL, DEMO_PASSWORD)
+      if (result.ok) {
+        router.replace(next)
+      } else {
+        setError(result.error)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,9 +145,19 @@ function AuthPageInner() {
             </span>
           </div>
 
-          <p className="mt-6 font-mono text-xs text-[var(--terminal-gray)]">
-            Demo auth — accounts are stored in this browser&apos;s localStorage. Not production-safe.
-          </p>
+          <div className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4 max-w-sm">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-primary mb-2">
+              Demo credentials
+            </p>
+            <p className="font-mono text-sm text-white/90 leading-relaxed">
+              {DEMO_EMAIL}
+              <br />
+              {DEMO_PASSWORD}
+            </p>
+            <p className="mt-2 text-xs text-[var(--terminal-gray)]">
+              Use these on the right to log in instantly.
+            </p>
+          </div>
         </motion.div>
 
         <div className="relative z-10 text-sm text-muted">
@@ -125,6 +188,88 @@ function AuthPageInner() {
                 ? "Enter your credentials to access your workspace."
                 : "Join the AI-powered startup revolution."}
             </p>
+          </div>
+
+          {/* DEMO CREDENTIALS CARD — one-click login for judges */}
+          <div className="mb-6 rounded-lg border border-primary/30 bg-primary/5 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-white">
+                Demo account (for judges)
+              </h3>
+            </div>
+            <div className="space-y-2 mb-3">
+              <div className="flex items-center justify-between gap-2 rounded-md bg-black/30 border border-white/5 px-3 py-2">
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase tracking-wider text-white/40">
+                    Email
+                  </div>
+                  <div className="font-mono text-sm text-white truncate">
+                    {DEMO_EMAIL}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(DEMO_EMAIL, "email")}
+                  className="shrink-0 h-7 w-7 inline-flex items-center justify-center rounded-md text-white/60 hover:text-primary hover:bg-white/5 transition-colors"
+                  title="Copy email"
+                >
+                  {copied === "email" ? (
+                    <Check className="h-3.5 w-3.5 text-primary" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-2 rounded-md bg-black/30 border border-white/5 px-3 py-2">
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase tracking-wider text-white/40">
+                    Password
+                  </div>
+                  <div className="font-mono text-sm text-white truncate">
+                    {DEMO_PASSWORD}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(DEMO_PASSWORD, "password")}
+                  className="shrink-0 h-7 w-7 inline-flex items-center justify-center rounded-md text-white/60 hover:text-primary hover:bg-white/5 transition-colors"
+                  title="Copy password"
+                >
+                  {copied === "password" ? (
+                    <Check className="h-3.5 w-3.5 text-primary" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={loginAsDemo}
+                disabled={submitting}
+                className="flex-1"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    Logging in…
+                  </>
+                ) : (
+                  "Log in with demo account"
+                )}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={fillDemoCredentials}
+              >
+                Autofill
+              </Button>
+            </div>
           </div>
 
           <div className="flex bg-surface p-1 gap-1 rounded-lg mb-8 border border-white/5">

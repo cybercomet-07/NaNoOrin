@@ -4,12 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ChevronDown,
+  ChevronUp,
+  Code2,
+  Copy,
+  Download,
   ExternalLink,
+  FileText,
   RefreshCw,
+  Rocket,
   Search,
   Sparkles,
   Trash2,
-  Rocket,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -24,15 +30,26 @@ import {
   type HistoryRun,
 } from "@/lib/runHistory";
 import { startPipelineRun } from "@/lib/pipeline";
+import { downloadZip } from "@/lib/zip";
 
 function StatusBadge({ status }: { status: HistoryRun["status"] }) {
   if (status === "FINALIZED") {
     return <Badge variant="success">Completed</Badge>;
   }
   if (status === "FAILED" || status === "PANIC") {
-    return <Badge variant="outline" className="border-red-500/40 text-red-400">Failed</Badge>;
+    return (
+      <Badge variant="outline" className="border-red-500/40 text-red-400">
+        Failed
+      </Badge>
+    );
   }
   return <Badge variant="outline">Running</Badge>;
+}
+
+function humanBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
 export default function HistoryPage() {
@@ -41,6 +58,7 @@ export default function HistoryPage() {
   const [query, setQuery] = useState("");
   const [, forceTick] = useState(0);
   const [regenerating, setRegenerating] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     setRuns(listRuns());
@@ -49,14 +67,12 @@ export default function HistoryPage() {
 
   useEffect(() => {
     refresh();
-    // Refresh when the tab regains focus / another tab wrote to localStorage.
     const onFocus = () => refresh();
     const onStorage = (e: StorageEvent) => {
       if (e.key === null || e.key === "orin.runs.v1") refresh();
     };
     window.addEventListener("focus", onFocus);
     window.addEventListener("storage", onStorage);
-    // Relative-time refresher.
     const t = window.setInterval(() => forceTick((n) => n + 1), 30_000);
     return () => {
       window.removeEventListener("focus", onFocus);
@@ -97,16 +113,27 @@ export default function HistoryPage() {
 
   const onDelete = (runId: string) => {
     removeRun(runId);
+    if (expanded === runId) setExpanded(null);
     refresh();
   };
 
   const onClearAll = () => {
     if (runs.length === 0) return;
-    if (!window.confirm(`Delete all ${runs.length} run${runs.length === 1 ? "" : "s"} from history?`)) {
+    if (
+      !window.confirm(
+        `Delete all ${runs.length} run${runs.length === 1 ? "" : "s"} from history?`,
+      )
+    ) {
       return;
     }
     clearAllRuns();
+    setExpanded(null);
     refresh();
+  };
+
+  const onDownloadZip = (run: HistoryRun) => {
+    const name = `${run.title.replace(/[^a-zA-Z0-9-_]+/g, "_").slice(0, 40) || "orin-run"}.zip`;
+    downloadZip(name, run.files);
   };
 
   return (
@@ -114,7 +141,8 @@ export default function HistoryPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">Workspace History</h1>
         <p className="text-muted text-lg">
-          Review and manage your previously generated projects.
+          Review your previous runs — click a row to see the prompt and the
+          generated code.
           {runs.length > 0 && (
             <span className="text-white/50">
               {" "}
@@ -153,84 +181,270 @@ export default function HistoryPage() {
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-surface/30 p-10 text-center">
           <p className="text-white/70">
-            No runs match <span className="font-mono">&ldquo;{query}&rdquo;</span>.
+            No runs match{" "}
+            <span className="font-mono">&ldquo;{query}&rdquo;</span>.
           </p>
         </div>
       ) : (
         <div className="grid gap-4">
-          {filtered.map((run) => (
-            <Card
-              key={run.runId}
-              className="bg-surface/30 backdrop-blur-md border-white/5 hover:border-primary/20 hover:bg-surface/40 transition-all shadow-lg shadow-black/20"
-            >
-              <CardContent className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-12 h-12 rounded-lg bg-surface flex items-center justify-center border border-white/5 shrink-0">
-                    <span className="text-xl font-bold text-white/50">
-                      {run.title.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-lg font-semibold text-white truncate">
-                      {run.title}
-                    </h3>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-muted flex-wrap">
-                      <span>{formatRelative(run.finishedAt)}</span>
-                      <span className="text-muted">•</span>
-                      <span>{run.category}</span>
-                      <span className="text-muted">•</span>
-                      <span className="font-mono text-xs">
-                        {Object.keys(run.files).length} file
-                        {Object.keys(run.files).length === 1 ? "" : "s"}
-                      </span>
-                      <span className="text-muted">•</span>
-                      <span className="font-mono text-xs">
-                        {(run.elapsedMs / 1000).toFixed(0)}s
-                      </span>
+          {filtered.map((run) => {
+            const isOpen = expanded === run.runId;
+            return (
+              <Card
+                key={run.runId}
+                className="bg-surface/30 backdrop-blur-md border-white/5 hover:border-primary/20 transition-all shadow-lg shadow-black/20"
+              >
+                <CardContent className="p-0">
+                  {/* Row summary (always visible) */}
+                  <div
+                    className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer"
+                    onClick={() =>
+                      setExpanded((id) => (id === run.runId ? null : run.runId))
+                    }
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-12 h-12 rounded-lg bg-surface flex items-center justify-center border border-white/5 shrink-0">
+                        <span className="text-xl font-bold text-white/50">
+                          {run.title.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-lg font-semibold text-white truncate">
+                          {run.title}
+                        </h3>
+                        <div className="flex items-center gap-3 mt-1 text-sm text-muted flex-wrap">
+                          <span>{formatRelative(run.finishedAt)}</span>
+                          <span className="text-muted">•</span>
+                          <span>{run.category}</span>
+                          <span className="text-muted">•</span>
+                          <span className="font-mono text-xs">
+                            {Object.keys(run.files).length} file
+                            {Object.keys(run.files).length === 1 ? "" : "s"}
+                          </span>
+                          <span className="text-muted">•</span>
+                          <span className="font-mono text-xs">
+                            {(run.elapsedMs / 1000).toFixed(0)}s
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      className="flex items-center gap-2 shrink-0 flex-wrap justify-end"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <StatusBadge status={run.status} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setExpanded((id) =>
+                            id === run.runId ? null : run.runId,
+                          )
+                        }
+                      >
+                        {isOpen ? (
+                          <>
+                            <ChevronUp className="h-4 w-4 mr-1" /> Hide
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4 mr-1" /> View
+                          </>
+                        )}
+                      </Button>
+                      <Link href={`/workspace/report/${run.runId}`}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="hidden sm:inline-flex"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Report
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!run.prompt || regenerating === run.runId}
+                        onClick={() => onRegenerate(run)}
+                      >
+                        {regenerating === run.runId ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Starting…
+                          </>
+                        ) : (
+                          <>
+                            <Rocket className="h-4 w-4 mr-2" />
+                            Regenerate
+                          </>
+                        )}
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(run.runId)}
+                        title="Delete from history"
+                        className="p-2 rounded-md text-white/30 hover:text-red-400 hover:bg-white/5 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  <StatusBadge status={run.status} />
-                  <Link href={`/workspace/report/${run.runId}`}>
-                    <Button variant="secondary" size="sm" className="hidden sm:flex">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open Report
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!run.prompt || regenerating === run.runId}
-                    onClick={() => onRegenerate(run)}
-                  >
-                    {regenerating === run.runId ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Starting…
-                      </>
-                    ) : (
-                      <>
-                        <Rocket className="h-4 w-4 mr-2" />
-                        Regenerate
-                      </>
-                    )}
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(run.runId)}
-                    title="Delete from history"
-                    className="p-2 rounded-md text-white/30 hover:text-red-400 hover:bg-white/5 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  {/* Expanded detail */}
+                  {isOpen && (
+                    <ExpandedRunPanel
+                      run={run}
+                      onDownloadZip={() => onDownloadZip(run)}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
+    </div>
+  );
+}
+
+function ExpandedRunPanel({
+  run,
+  onDownloadZip,
+}: {
+  run: HistoryRun;
+  onDownloadZip: () => void;
+}) {
+  const fileNames = Object.keys(run.files);
+  const preferred = ["index.html", "styles.css", "script.js", "README.md"];
+  const defaultFile =
+    preferred.find((p) => run.files[p]) ?? fileNames[0] ?? null;
+  const [active, setActive] = useState<string | null>(defaultFile);
+  const [copied, setCopied] = useState(false);
+
+  const activeContent = active ? run.files[active] ?? "" : "";
+
+  const onCopy = async () => {
+    if (!active) return;
+    try {
+      await navigator.clipboard.writeText(activeContent);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error("copy failed", err);
+    }
+  };
+
+  const onDownloadFile = () => {
+    if (!active) return;
+    const blob = new Blob([activeContent], {
+      type: "text/plain;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = active;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div
+      className="border-t border-white/5 bg-[#050505]/40 p-6 space-y-6"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs uppercase tracking-widest text-white/50 flex items-center gap-2">
+            <FileText className="h-3.5 w-3.5" /> User Prompt
+          </h4>
+          <span className="text-[11px] text-white/30">
+            {run.prompt.length} chars · {run.staticSite ? "Static Site" : "Full Pipeline"}
+          </span>
+        </div>
+        <pre className="whitespace-pre-wrap font-mono text-[12.5px] text-white/90 bg-[#0a0a0a] border border-white/10 rounded-lg p-4 leading-relaxed max-h-52 overflow-y-auto">
+          {run.prompt || "(no prompt stored)"}
+        </pre>
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs uppercase tracking-widest text-white/50 flex items-center gap-2">
+            <Code2 className="h-3.5 w-3.5" /> Generated Code
+            <span className="text-white/30 normal-case tracking-normal">
+              · {fileNames.length} file{fileNames.length === 1 ? "" : "s"}
+            </span>
+          </h4>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={onDownloadZip}>
+              <Download className="h-4 w-4 mr-2" /> Download .zip
+            </Button>
+          </div>
+        </div>
+
+        {fileNames.length === 0 ? (
+          <div className="rounded-lg border border-white/10 bg-[#0a0a0a] p-6 text-center text-white/60 text-sm">
+            This run produced no files.
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-[220px_minmax(0,1fr)] gap-4">
+            <ul className="rounded-lg border border-white/10 bg-[#0a0a0a] overflow-hidden divide-y divide-white/5 self-start max-h-80 overflow-y-auto">
+              {fileNames.map((name) => {
+                const size = new Blob([run.files[name] ?? ""]).size;
+                const isActive = name === active;
+                return (
+                  <li key={name}>
+                    <button
+                      type="button"
+                      onClick={() => setActive(name)}
+                      className={`w-full text-left px-4 py-2.5 flex items-center justify-between gap-2 transition-colors ${
+                        isActive ? "bg-primary/10" : "hover:bg-white/5"
+                      }`}
+                    >
+                      <span
+                        className={`font-mono text-xs truncate ${
+                          isActive ? "text-primary" : "text-white/80"
+                        }`}
+                      >
+                        {name}
+                      </span>
+                      <span className="text-[10px] text-white/40 shrink-0">
+                        {humanBytes(size)}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="rounded-lg border border-white/10 bg-[#0a0a0a] overflow-hidden flex flex-col min-w-0">
+              <div className="flex items-center justify-between border-b border-white/5 px-4 py-2 bg-black/40">
+                <span className="font-mono text-xs text-white/80 truncate">
+                  {active ?? "(no file selected)"}
+                </span>
+                {active && (
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={onCopy}>
+                      <Copy className="h-3.5 w-3.5 mr-1" />
+                      {copied ? "Copied" : "Copy"}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={onDownloadFile}>
+                      <Download className="h-3.5 w-3.5 mr-1" />
+                      File
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <pre className="overflow-auto max-h-80 text-[12px] leading-relaxed font-mono text-white/90 p-4">
+                <code>{activeContent || "(empty file)"}</code>
+              </pre>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
