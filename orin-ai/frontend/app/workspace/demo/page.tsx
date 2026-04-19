@@ -10,9 +10,9 @@ import { DEMO_PROMPTS, type DemoPrompt } from "@/lib/demoPrompts"
 import { startPipelineRun } from "@/lib/pipeline"
 
 const TAG_STYLES: Record<DemoPrompt["tag"], string> = {
-  API: "bg-primary/15 text-primary border-primary/30",
-  DATA: "bg-secondary/15 text-secondary border-secondary/30",
-  UTIL: "bg-white/10 text-white border-white/20",
+  WEB: "bg-primary/15 text-primary border-primary/30",
+  UI: "bg-secondary/15 text-secondary border-secondary/30",
+  PAGE: "bg-white/10 text-white border-white/20",
 }
 
 export default function DemoPromptsPage() {
@@ -34,7 +34,7 @@ export default function DemoPromptsPage() {
     setError("")
     setLoading(true)
     try {
-      const runId = await startPipelineRun(prompt)
+      const runId = await startPipelineRun(prompt, { forceStaticSite: true })
       try {
         sessionStorage.setItem(`orin:prompt:${runId}`, prompt)
       } catch {

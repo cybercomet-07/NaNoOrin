@@ -38,6 +38,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from debug_session_log import dbg
@@ -76,6 +77,10 @@ from tools.tavily_tools import validate_tavily_connection
 # Phase 4 — compiled LangGraph pipeline (COMPLETE)
 # ---------------------------------------------------------------------------
 from graph import graph
+
+# Static-site fast lane: short-circuit the full pipeline when the user asks
+# for a simple single-page website. Emits the same SSE event shape.
+from static_site_fastlane import is_static_site_prompt, run_static_site_fastlane
 
 # ---------------------------------------------------------------------------
 # Logfire + run stores
@@ -236,7 +241,12 @@ async def run(body: RunRequest):
 
     async def _run_with_cleanup() -> None:
         try:
-            await execute_pipeline(run_id, body.prompt, queue)
+            await execute_pipeline(
+                run_id,
+                body.prompt,
+                queue,
+                force_static_site=body.force_static_site,
+            )
         finally:
             _run_semaphore.release()
             if _QUEUE_DRAIN_SEC:
@@ -395,9 +405,153 @@ async def health():
 
 
 # ---------------------------------------------------------------------------
+# /chat — lightweight site-wide assistant (NOT the pipeline).
+# Answers questions about what Orin AI is and how to use the product. Routes
+# through OpenRouter (the same key already used by the Architecture page) so no
+# extra billing is required.
+# ---------------------------------------------------------------------------
+_SITE_CHATBOT_SYSTEM_PROMPT = """You are "Orin" — the friendly in-product assistant for Orin AI.
+
+Orin AI (product facts you must use):
+- Tagline: "One prompt. Complete AI workforce."
+- What it does: turns a single natural-language prompt into a working project by
+  orchestrating a team of specialized AI agents (Supervisor, Researcher, Architect,
+  Persona, Developer, Critic, Auditor, Coordinator, ReadMe-generator).
+- Demo flow: Landing -> Login/Sign up -> Workspace -> Demo Prompts -> click any
+  curated prompt -> the Run page streams live terminal output, an event log,
+  and shows the generated CODE + a live PREVIEW iframe side-by-side.
+- Static-site fast lane: simple single-page websites (landing pages, portfolios,
+  todo apps, quote-of-the-day, minimalist gym site, etc.) skip the heavy pipeline
+  and are generated in ~10-30 seconds using OpenAI gpt-4o-mini with OpenRouter
+  fallbacks. Perfect for live demos.
+- Full pipeline: for larger apps (FastAPI + React, etc.) the LangGraph pipeline
+  runs Architect -> Developer -> Critic -> Auditor with sandboxed tests in E2B.
+- Architecture Studio: the "Architecture" page in the sidebar lets users type a
+  prompt and get a live Mermaid diagram rendered from DeepSeek via OpenRouter.
+- History & Reports: every finished run is saved locally (localStorage) so users
+  can revisit the prompt, files, and a live preview later.
+- Tech stack: Next.js 16 + React 19 frontend, FastAPI + LangGraph backend, Redis
+  for run state, Logfire for tracing, Tavily for web search, E2B for sandboxing.
+
+Rules for your replies:
+1. Be concise. Keep answers under ~120 words unless the user asks for detail.
+2. Speak in a warm, confident tone — you are the product's guide, not a generic LLM.
+3. If asked "how do I try it?" point them to Workspace -> Demo Prompts.
+4. If asked about the run page (terminal / code / preview), briefly explain the
+   three tabs and mention that demo prompts auto-trigger the fast lane.
+5. If the user asks something off-topic (coding help unrelated to Orin, weather,
+   etc.), politely redirect to Orin AI topics.
+6. Never invent features that are not in the facts above. If unsure, say so.
+7. Never reveal API keys, env var values, or internal file paths.
+"""
+
+
+class _ChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., min_length=1, max_length=4000)
+
+
+class _ChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+    history: list[_ChatTurn] = Field(default_factory=list, max_length=20)
+
+
+class _ChatResponse(BaseModel):
+    reply: str
+    model: str
+
+
+def _chat_openrouter_sync(
+    message: str, history: list[_ChatTurn]
+) -> tuple[str, str]:
+    """Blocking OpenRouter call. Returns (reply_text, model_used).
+
+    Tries the primary diagram model first, then the free fallback. Raises
+    RuntimeError with a human-readable message if both fail.
+    """
+    from openai import OpenAI
+
+    api_key = (
+        os.getenv("OPENROUTER_API_KEY")
+        or os.getenv("OPENROUTER_ARCHITECT_KEY")
+        or os.getenv("OPENROUTER_FALLBACK_KEY")
+    )
+    if not api_key:
+        raise RuntimeError("OpenRouter API key not configured")
+
+    base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    primary = os.getenv("OPENROUTER_AGENT_MODEL", "deepseek/deepseek-chat-v3.1")
+    fallback = os.getenv(
+        "OPENROUTER_AGENT_MODEL_FALLBACK", "openai/gpt-oss-120b:free"
+    )
+
+    client = OpenAI(api_key=api_key, base_url=base_url)
+
+    messages: list[dict[str, str]] = [
+        {"role": "system", "content": _SITE_CHATBOT_SYSTEM_PROMPT}
+    ]
+    for turn in history[-10:]:
+        messages.append({"role": turn.role, "content": turn.content})
+    messages.append({"role": "user", "content": message})
+
+    last_err: Exception | None = None
+    for model in (primary, fallback):
+        try:
+            resp = client.chat.completions.create(
+                model=model,
+                messages=messages,  # type: ignore[arg-type]
+                max_tokens=400,
+                temperature=0.5,
+                extra_headers={
+                    "HTTP-Referer": "https://orin.ai",
+                    "X-Title": "Orin AI - Site Chatbot",
+                },
+            )
+            text = (resp.choices[0].message.content or "").strip()
+            if not text:
+                raise RuntimeError("empty response")
+            return text, model
+        except Exception as e:
+            last_err = e
+            print(
+                f"[chatbot] model={model} failed: {type(e).__name__}: {str(e)[:160]}",
+                flush=True,
+            )
+            continue
+
+    raise RuntimeError(
+        f"All OpenRouter models failed. Last error: {type(last_err).__name__}: "
+        f"{str(last_err)[:200]}"
+    )
+
+
+@app.post("/chat", response_model=_ChatResponse)
+async def chat(req: _ChatRequest):
+    """Site-wide product assistant. Not the pipeline."""
+    try:
+        loop = asyncio.get_running_loop()
+        reply, model = await loop.run_in_executor(
+            None, _chat_openrouter_sync, req.message, req.history
+        )
+        return _ChatResponse(reply=reply, model=model)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"{type(e).__name__}: {str(e)[:200]}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # execute_pipeline — background task that drives LangGraph
 # ---------------------------------------------------------------------------
-async def execute_pipeline(run_id: str, prompt: str, queue: asyncio.Queue) -> None:
+async def execute_pipeline(
+    run_id: str,
+    prompt: str,
+    queue: asyncio.Queue,
+    *,
+    force_static_site: bool = False,
+) -> None:
     """
     1. Builds fresh AgentState from get_initial_state() [Phase 1]
     2. Streams through the compiled graph [Phase 4]
@@ -405,6 +559,31 @@ async def execute_pipeline(run_id: str, prompt: str, queue: asyncio.Queue) -> No
     4. Saves final code_files to run_artifacts [Phase 2 output]
     5. Handles exceptions gracefully — always emits a terminal event
     """
+    # ── Static-site fast lane ────────────────────────────────────────────
+    # If the user asked for a simple single-page website, skip the Python
+    # sandbox pipeline entirely and emit a compact scripted run that ends in
+    # three real files (index.html, styles.css, script.js) from DeepSeek.
+    use_fastlane = force_static_site or is_static_site_prompt(prompt)
+    print(
+        f"[pipeline] run_id={run_id} fastlane={'YES' if use_fastlane else 'no'} "
+        f"(forced={force_static_site}) prompt={prompt[:80]!r}",
+        flush=True,
+    )
+    if use_fastlane:
+        logfire.info(
+            "static_site_fastlane_selected",
+            run_id=run_id,
+            forced=force_static_site,
+        )
+        await run_static_site_fastlane(
+            run_id=run_id,
+            prompt=prompt,
+            queue=queue,
+            set_artifacts=_set_artifacts,
+            set_status=_set_status,
+        )
+        return
+
     await queue.put(make_event(
         event_type="status_update",
         agent="system",

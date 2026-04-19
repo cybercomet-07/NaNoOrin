@@ -1,9 +1,45 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { AgentEvent } from "@/hooks/usePipelineStream"
 import ArtifactPanel from "./ArtifactPanel"
 import { motion, AnimatePresence } from "framer-motion"
 import ReactMarkdown from "react-markdown"
+
+/**
+ * Build a single self-contained HTML document from a set of generated files by
+ * inlining styles.css into a <style> block and script.js into a <script> block.
+ *
+ * Why: the static-site fast lane returns three files linked by relative paths
+ * (`<link href="styles.css">` / `<script src="script.js">`). Those paths resolve
+ * to nothing inside an iframe's srcDoc, so we inline them so the preview works
+ * out of the box.
+ */
+function buildInlinedHtml(files: Record<string, string>): string | null {
+  const html = files["index.html"]
+  if (!html) return null
+  const css = files["styles.css"] ?? ""
+  const js = files["script.js"] ?? ""
+  const styleBlock = css ? `<style>\n${css}\n</style>` : ""
+  const scriptBlock = js ? `<script>\n${js}\n</script>` : ""
+
+  let out = html
+  out = out.replace(
+    /<link[^>]*href=["']styles\.css["'][^>]*>/gi,
+    styleBlock,
+  )
+  out = out.replace(
+    /<script[^>]*src=["']script\.js["'][^>]*><\/script>/gi,
+    scriptBlock,
+  )
+  // If the original didn't reference those files, still inject before </head> / </body>.
+  if (styleBlock && !out.includes(styleBlock)) {
+    out = out.replace(/<\/head>/i, `${styleBlock}\n</head>`)
+  }
+  if (scriptBlock && !out.includes(scriptBlock)) {
+    out = out.replace(/<\/body>/i, `${scriptBlock}\n</body>`)
+  }
+  return out
+}
 
 interface Props {
   events: AgentEvent[]
@@ -35,6 +71,9 @@ export default function PipelineWorkspace({ events, status, codeFiles, runId }: 
   const [activeTab, setActiveTab] = useState<Tab>("PREVIEW")
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [originalPrompt, setOriginalPrompt] = useState<string | null>(null)
+
+  // Memoized inlined HTML document for the PREVIEW iframe.
+  const previewHtml = useMemo(() => buildInlinedHtml(codeFiles), [codeFiles])
 
   useEffect(() => {
     try {
@@ -99,7 +138,32 @@ export default function PipelineWorkspace({ events, status, codeFiles, runId }: 
           >
             {activeTab === "PREVIEW" && (
               <div className="p-8 md:p-12 h-full overflow-y-auto">
-                {status === "FINALIZED" && codeFiles["README.md"] ? (
+                {status === "FINALIZED" && previewHtml ? (
+                  <div className="max-w-5xl mx-auto bg-surface/40 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl">
+                    <div className="flex items-center justify-between mb-3 px-2 py-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
+                        <span className="ml-3 font-mono text-[10px] uppercase tracking-widest text-primary">
+                          Live Preview · index.html
+                        </span>
+                      </div>
+                      <span className="font-mono text-[10px] text-[var(--terminal-green)]">
+                        ✓ {Object.keys(codeFiles).length} files
+                      </span>
+                    </div>
+                    <div className="rounded-xl overflow-hidden border border-white/10 bg-white">
+                      <iframe
+                        title="Generated site preview"
+                        srcDoc={previewHtml}
+                        sandbox="allow-scripts allow-forms"
+                        className="w-full block"
+                        style={{ height: "min(75vh, 720px)", border: 0 }}
+                      />
+                    </div>
+                  </div>
+                ) : status === "FINALIZED" && codeFiles["README.md"] ? (
                   <div className="max-w-3xl mx-auto bg-surface/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
                     <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
                       <div>

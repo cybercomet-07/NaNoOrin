@@ -1,5 +1,5 @@
 "use client"
-import { use, useState } from "react"
+import { use, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
@@ -15,6 +15,12 @@ import {
 } from "@/components/RunToolbar"
 import { useAuth } from "@/hooks/useAuth"
 import { SnowBackground } from "@/components/shared/SnowBackground"
+import {
+  deriveCategory,
+  deriveTitle,
+  upsertRun,
+  type RunStatus,
+} from "@/lib/runHistory"
 
 function RunPageInner({ runId }: { runId: string }) {
   const { events, status, agentStatuses, testResults, codeFiles, error } =
@@ -22,6 +28,45 @@ function RunPageInner({ runId }: { runId: string }) {
   const router = useRouter()
   const { session, logout } = useAuth()
   const [logsTab, setLogsTab] = useState<LogsTab>(null)
+
+  // Record this run into localStorage history once it reaches a terminal state.
+  // Gate with a ref so React StrictMode double-invoke and subsequent status
+  // flicker never write twice.
+  const recordedRef = useRef(false)
+  useEffect(() => {
+    if (recordedRef.current) return
+    if (status !== "FINALIZED" && status !== "FAILED" && status !== "PANIC") return
+
+    let prompt = ""
+    try {
+      prompt = sessionStorage.getItem(`orin:prompt:${runId}`) ?? ""
+    } catch {
+      prompt = ""
+    }
+
+    const firstTs =
+      events.length > 0 ? new Date(events[0].timestamp).getTime() : Date.now()
+    const lastTs =
+      events.length > 0
+        ? new Date(events[events.length - 1].timestamp).getTime()
+        : Date.now()
+    const files = codeFiles ?? {}
+    const staticSite = Boolean(files["index.html"])
+
+    upsertRun({
+      runId,
+      title: deriveTitle(prompt) || "Untitled Project",
+      prompt,
+      status: status as RunStatus,
+      startedAt: firstTs,
+      finishedAt: lastTs,
+      elapsedMs: Math.max(0, lastTs - firstTs),
+      files,
+      category: deriveCategory(prompt, files),
+      staticSite,
+    })
+    recordedRef.current = true
+  }, [status, runId, events, codeFiles])
 
   const handleLogout = () => {
     logout()

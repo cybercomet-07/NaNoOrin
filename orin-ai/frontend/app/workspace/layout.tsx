@@ -25,7 +25,9 @@ export default function WorkspaceLayout({
     "/workspace/report",
     "/workspace/settings",
   ];
-  const shouldShowSnow = snowRoutes.includes(pathname);
+  const shouldShowSnow =
+    snowRoutes.includes(pathname) ||
+    snowRoutes.some((r) => pathname.startsWith(`${r}/`));
 
   const content = (
     <div className="p-8">

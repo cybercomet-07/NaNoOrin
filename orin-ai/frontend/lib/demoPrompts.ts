@@ -1,7 +1,12 @@
 /**
- * Curated small prompts that fit within Groq free-tier token budgets
- * (≈100k tokens/day per key on llama-3.3-70b). These prompts are intentionally
- * tiny so the Developer agent returns in 1–2 iterations and all tests pass.
+ * Demo prompts for the judges. Each one describes a small single-page static
+ * website. The backend detects the "static site" shape of the prompt and runs
+ * a fast-lane flow: one DeepSeek call → index.html + styles.css + script.js
+ * land in the CODE tab, and index.html renders in the PREVIEW tab.
+ *
+ * Keep the wording plain English. The detector looks for phrases like
+ * "single-page", "landing page", "portfolio", "static page", "html page" etc.,
+ * so every prompt below contains at least one of those tokens near the top.
  */
 
 export interface DemoPrompt {
@@ -11,68 +16,78 @@ export interface DemoPrompt {
   prompt: string
   estTokens: number
   estSeconds: number
-  tag: "API" | "DATA" | "UTIL"
+  tag: "WEB" | "UI" | "PAGE"
 }
 
 export const DEMO_PROMPTS: DemoPrompt[] = [
   {
-    id: "hello_api",
-    title: "Hello API",
-    subtitle: "Tiny FastAPI with one /hello endpoint",
+    id: "landing_coffee",
+    title: "Coffee Shop Landing",
+    subtitle: "One-page landing site for a small cafe",
     prompt:
-      "Build a minimal FastAPI app with a single GET /hello endpoint that returns {\"message\": \"hello world\"}. Include pytest tests that verify the status code is 200 and the JSON body is exactly {\"message\": \"hello world\"}.",
-    estTokens: 8000,
-    estSeconds: 45,
-    tag: "API",
+      "A simple single-page static landing website for a small neighborhood coffee shop called 'Ember & Bean'. The page should include a hero section with the shop name and a one-line tagline, a short about paragraph, a small menu listing 4 drinks with prices, and a footer with an address and opening hours. Clean, warm, cozy design.",
+    estTokens: 2500,
+    estSeconds: 30,
+    tag: "WEB",
   },
   {
-    id: "todo_static",
-    title: "Static Todo List",
-    subtitle: "FastAPI GET /todos returning 3 hard-coded todos",
+    id: "portfolio_card",
+    title: "Personal Portfolio",
+    subtitle: "Minimalist single-card developer portfolio",
     prompt:
-      "Build a minimal FastAPI app with a GET /todos endpoint that returns a hard-coded JSON list of exactly three todo objects, each with id (int), title (str), and done (bool). Include pytest tests that verify the endpoint returns 200 and exactly 3 todos with the correct keys.",
-    estTokens: 10000,
-    estSeconds: 55,
-    tag: "API",
+      "A single-page static portfolio website for a developer named 'Alex Morgan'. Show a centered card with the name, the job title 'Full-stack Developer', a two-sentence bio, three skill pills (TypeScript, Python, React), and three text links labelled GitHub, LinkedIn and Email. Modern, minimal, dark palette.",
+    estTokens: 2200,
+    estSeconds: 25,
+    tag: "UI",
   },
   {
-    id: "counter",
-    title: "Visitor Counter",
-    subtitle: "In-memory counter with GET and POST /count",
+    id: "countdown",
+    title: "Event Countdown",
+    subtitle: "Live countdown to a fixed event",
     prompt:
-      "Build a minimal FastAPI app with an in-memory integer counter. Expose GET /count that returns {\"count\": N} and POST /count that increments the counter and returns the new value. Include pytest tests that verify the counter starts at 0, increments by 1 on POST, and is readable via GET.",
-    estTokens: 12000,
-    estSeconds: 60,
-    tag: "API",
+      "A single-page static countdown website for an event titled 'Launch Day'. Hard-code a target date fourteen days from today in script.js. Show a live-updating display of days, hours, minutes and seconds remaining inside a centered card. Use vanilla JS and setInterval.",
+    estTokens: 2400,
+    estSeconds: 30,
+    tag: "PAGE",
   },
   {
-    id: "quote",
-    title: "Random Quote",
-    subtitle: "FastAPI GET /quote from a fixed list",
+    id: "quote_of_day",
+    title: "Quote of the Day",
+    subtitle: "Shuffles a new quote on button click",
     prompt:
-      "Build a minimal FastAPI app with a GET /quote endpoint that returns a random quote from a hard-coded list of five quotes. The response should be {\"quote\": \"...\", \"author\": \"...\"}. Include pytest tests that verify the endpoint returns 200 and the response shape has both keys with non-empty string values.",
-    estTokens: 11000,
-    estSeconds: 55,
-    tag: "DATA",
+      "A single-page static website that shows a 'quote of the day'. Hard-code an array of 5 quote objects ({ text, author }) in script.js. Display one quote centered on the page inside a card, and a 'New quote' button that picks a different random quote each click.",
+    estTokens: 2200,
+    estSeconds: 25,
+    tag: "UI",
   },
   {
-    id: "echo",
-    title: "Echo Service",
-    subtitle: "POST /echo returns whatever body it receives",
+    id: "todo_local",
+    title: "Todo List",
+    subtitle: "Add / complete / delete tasks in the browser",
     prompt:
-      "Build a minimal FastAPI app with a POST /echo endpoint that accepts any JSON body and returns the exact same body back under the key 'echo'. Include pytest tests that POST a sample object and verify the response contains it under 'echo'.",
-    estTokens: 9000,
-    estSeconds: 50,
-    tag: "UTIL",
+      "A single-page static todo list website. Use vanilla JS and localStorage in the browser — no backend. Let the user type a task into an input, press Enter or click 'Add' to append it, click a checkbox to mark it done (strike-through style), and click an X to delete it. Persist everything in localStorage so it survives a reload.",
+    estTokens: 2800,
+    estSeconds: 30,
+    tag: "WEB",
   },
   {
-    id: "calculator",
-    title: "Calculator",
-    subtitle: "FastAPI with /add, /subtract, /multiply, /divide",
+    id: "product_card",
+    title: "Product Card",
+    subtitle: "E-commerce product detail card",
     prompt:
-      "Build a minimal FastAPI app with four endpoints: POST /add, POST /subtract, POST /multiply, POST /divide. Each accepts {\"a\": number, \"b\": number} and returns {\"result\": number}. Division by zero must return HTTP 400. Include pytest tests for each operation and for the divide-by-zero case.",
-    estTokens: 14000,
-    estSeconds: 75,
-    tag: "UTIL",
+      "A single-page static website showing one e-commerce product detail card. Hard-code one product: name 'Minimalist Desk Lamp', price $49, a two-line description, rating 4.6/5. Show an image placeholder (a colored div), the name, price, a 5-star rating row using unicode stars, the description, and an 'Add to cart' button. Clicking the button shows a short toast message 'Added to cart' for 2 seconds.",
+    estTokens: 2600,
+    estSeconds: 30,
+    tag: "WEB",
+  },
+  {
+    id: "gym_minimal",
+    title: "Minimalist Gym Website",
+    subtitle: "One-page landing site for a modern gym",
+    prompt:
+      "A simple minimalist single-page static website for a modern gym called 'IRON & OAK'. Render real content on first paint — nothing should be empty. Include: a hero section with the gym name, a one-line promise ('Train smart. Recover harder.') and a 'Join now' call-to-action button; a short 2-sentence about paragraph; three feature cards for Strength, Cardio and Recovery (each with an emoji glyph and 1-sentence description); a pricing row with three tiers (Starter $29/mo, Pro $59/mo, Elite $99/mo) each listing three perks; a 3-row weekly class schedule table (class name, day, time); and a footer with opening hours (Mon–Fri 6 AM–10 PM, Sat–Sun 8 AM–8 PM) and an address line. Use a dark base with lime/yellow accents and strong sans-serif typography. The page must look great on mobile and desktop.",
+    estTokens: 3200,
+    estSeconds: 35,
+    tag: "WEB",
   },
 ]

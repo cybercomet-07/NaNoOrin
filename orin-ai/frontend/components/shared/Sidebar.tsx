@@ -51,9 +51,9 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: -256, opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="w-64 border-r border-white/5 bg-transparent backdrop-blur-[2px] h-screen flex flex-col pt-6 pb-4 fixed z-40 group"
+          className="w-64 border-r border-white/5 bg-transparent backdrop-blur-[2px] h-screen flex flex-col pt-6 fixed inset-y-0 left-0 z-40 group"
         >
-          <div className="px-6 mb-12 flex items-center justify-between">
+          <div className="shrink-0 px-6 mb-8 flex items-center justify-between">
             <Logo />
             <Button
               variant="ghost"
@@ -65,7 +65,7 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
             </Button>
           </div>
 
-          <nav className="flex-1 px-3 space-y-1">
+          <nav className="flex-1 min-h-0 overflow-y-auto px-3 space-y-1">
             {links.map((link) => {
               const isActive =
                 pathname === link.href ||
@@ -105,7 +105,7 @@ export function Sidebar({ isVisible, onToggle }: SidebarProps) {
             })}
           </nav>
 
-          <div className="px-3 mt-auto mb-4 space-y-2">
+          <div className="shrink-0 px-3 pt-4 pb-2 mt-auto space-y-2 border-t border-white/5 bg-[#050505]/60 backdrop-blur-sm">
             {session && (
               <div className="px-3 py-2 rounded-md border border-white/5 bg-surface/50 text-xs font-mono">
                 <div className="text-[var(--terminal-gray)] uppercase tracking-widest text-[10px] mb-0.5">

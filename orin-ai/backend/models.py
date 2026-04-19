@@ -24,6 +24,13 @@ class RunRequest(BaseModel):
         max_length=2000,
         description="Natural language goal for Orin AI to build",
     )
+    # When True, skip the heuristic detector and force the static-site fast
+    # lane. Used by the built-in Demo Prompts page, where we know every prompt
+    # is a single-page site and can't afford detector false negatives.
+    force_static_site: bool = Field(
+        False,
+        description="Force the static-site fast lane (bypass heuristic detection).",
+    )
 
 
 # ── Response models ────────────────────────────────────────────────────────────

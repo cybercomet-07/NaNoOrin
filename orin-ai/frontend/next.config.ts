@@ -11,6 +11,8 @@ const backendBase = (process.env.BACKEND_URL || "http://127.0.0.1:8000").replace
 );
 
 const nextConfig: NextConfig = {
+  // Hide the small "N" dev-mode route indicator in the bottom-left corner.
+  devIndicators: false,
   async rewrites() {
     return [
       {

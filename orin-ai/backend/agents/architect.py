@@ -33,16 +33,27 @@ def fallback_architecture(goal: str) -> Architecture:
 
 
 def generate_architecture(state: AgentState) -> tuple[Architecture, str]:
-    system = "You are a senior software architect. Generate a complete technical architecture as JSON."
+    system = (
+        "You are a senior software architect. Generate a complete technical architecture as JSON. "
+        "Your job is NOT to add scope. If the goal describes a single static-style web page "
+        "(a landing page, portfolio, countdown, quote card, todo list in the browser, product card, "
+        "etc. — no database, no auth, no real CRUD across many resources), keep the architecture "
+        "MINIMAL: one FastAPI service serving the HTML inline from GET /. Do not invent databases, "
+        "message queues, background workers or multi-service setups for simple sites — "
+        "db_schema can be an empty placeholder class and api_spec can describe just GET /. "
+        "Only propose a real DB / multiple endpoints when the goal genuinely requires them."
+    )
     user = "\n\n".join(
         [
             f"Original goal:\n{state['goal']}",
             f"Competitor analysis:\n{state.get('research_output') or '(none)'}",
             f"User personas:\n{state.get('personas') or '(none)'}",
             (
-                "Generate: (1) docker-compose.yml content, (2) SQLAlchemy models as Python code string, "
-                "(3) OpenAPI YAML spec for all endpoints, (4) tech stack rationale. "
-                "Optimize for: MVP speed, testability, security. "
+                "Generate: (1) docker-compose.yml content, (2) SQLAlchemy models as Python code string "
+                "(may be a single empty DeclarativeBase class if no DB is needed), (3) OpenAPI YAML "
+                "spec for all endpoints (for single-page sites this is just GET / returning text/html), "
+                "(4) tech stack rationale — keep this short (2-4 sentences) and match the scale of the goal. "
+                "Optimize for: MVP speed, testability, minimal surface area. "
                 'Return JSON only with keys: docker_compose, db_schema, api_spec, tech_rationale. '
                 "All values must be non-empty strings."
             ),

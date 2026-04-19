@@ -60,7 +60,7 @@ Generate a complete, professional README.md for this project."""
 
     return (
         call_agent_llm(
-            "architect",
+            "readme_generator",
             README_SYSTEM_PROMPT,
             user_message,
             messages_history=state.get("messages", []),

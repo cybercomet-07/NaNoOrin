@@ -2,7 +2,15 @@
  * Starts a pipeline run via same-origin `/api/run` (Next rewrites to FastAPI).
  */
 
-export async function startPipelineRun(prompt: string): Promise<string> {
+export interface StartPipelineRunOptions {
+  /** Force the backend to run the static-site fast lane (bypasses heuristic detection). */
+  forceStaticSite?: boolean;
+}
+
+export async function startPipelineRun(
+  prompt: string,
+  options: StartPipelineRunOptions = {},
+): Promise<string> {
   const trimmed = prompt.trim();
   if (trimmed.length < 10) {
     throw new Error("Prompt must be at least 10 characters");
@@ -11,7 +19,10 @@ export async function startPipelineRun(prompt: string): Promise<string> {
   const res = await fetch("/api/run", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt: trimmed }),
+    body: JSON.stringify({
+      prompt: trimmed,
+      force_static_site: Boolean(options.forceStaticSite),
+    }),
   });
 
   let body: unknown = {};

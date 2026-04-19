@@ -87,6 +87,36 @@ _DEEPSEEK_ENV_KEYS = ("DEEPSEEK_API_KEY_1", "DEEPSEEK_API_KEY_2")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 
+# OpenRouter routing for specific agents (Developer, Architect). These two agents
+# produce the project code + architecture, which is what the judges actually see.
+# Free Groq buckets are unreliable for code generation; OpenRouter with DeepSeek v3.1
+# is rock-solid within the free-tier credits on each OpenRouter account. Each agent
+# uses its OWN key so their quotas don't interfere with each other.
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+OPENROUTER_AGENT_MODEL = os.getenv("OPENROUTER_AGENT_MODEL", "deepseek/deepseek-chat-v3.1")
+OPENROUTER_AGENT_MODEL_FALLBACK = os.getenv(
+    "OPENROUTER_AGENT_MODEL_FALLBACK", "openai/gpt-oss-120b:free"
+)
+
+# Per-agent OpenRouter keys. Critic / Auditor / ReadMe-generator now route to
+# the OpenRouter account that used to power the Developer (sk-or-v1-3fdae4…).
+# Developer itself has moved to OpenAI paid (below); if OPENAI_API_KEY is blank
+# Developer falls back through OpenRouter as before.
+_AGENT_OPENROUTER_ENV_KEY: dict[str, str] = {
+    "developer": "OPENROUTER_DEVELOPER_KEY",
+    "architect": "OPENROUTER_ARCHITECT_KEY",
+    "critic": "OPENROUTER_CRITIC_KEY",
+    "auditor": "OPENROUTER_AUDITOR_KEY",
+    "readme_generator": "OPENROUTER_README_KEY",
+}
+
+# OpenAI direct-API routing. Only the Developer agent uses it today.
+# Leave OPENAI_API_KEY unset to skip OpenAI and use OpenRouter instead.
+OPENAI_API_KEY_ENV = "OPENAI_API_KEY"
+_AGENT_OPENAI_MODEL: dict[str, str] = {
+    "developer": os.getenv("OPENAI_DEVELOPER_MODEL", "gpt-4o-mini"),
+}
+
 # Per-agent *preferred* key (first to try). Fallback walks the rest of the pool.
 # Spread across 5 keys so concurrent agents don't stack on the same quota bucket.
 _AGENT_PREFERRED_KEY: dict[str, str] = {
@@ -97,6 +127,8 @@ _AGENT_PREFERRED_KEY: dict[str, str] = {
     "critic": "GROQ_API_KEY_5",
     "persona": "GROQ_API_KEY_1",
     "auditor": "GROQ_API_KEY_2",
+    # README generator: lowest-priority key so it doesn't contend with live agents.
+    "readme_generator": "GROQ_API_KEY_3",
 }
 
 VALID_AGENT_NAMES = frozenset(_AGENT_PREFERRED_KEY.keys())
@@ -114,6 +146,7 @@ AGENT_MODELS = {
     "critic": GROQ_LLAMA_8B_INSTANT,
     "persona": GROQ_LLAMA_8B_INSTANT,
     "auditor": GROQ_LLAMA_8B_INSTANT,
+    "readme_generator": GROQ_LLAMA_8B_INSTANT,
 }
 
 # Daily-exhausted key registry: {env_key: unix_ts_when_usable_again}
@@ -154,6 +187,207 @@ def _deepseek_client_for_env_key(env_key: str) -> OpenAI:
     if not api_key:
         raise ValueError(f"Missing environment variable: {env_key}")
     return OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL)
+
+
+@lru_cache(maxsize=8)
+def _openrouter_client_for_env_key(env_key: str) -> OpenAI:
+    """Lazy OpenRouter client. OpenRouter is OpenAI-compatible."""
+    api_key = os.getenv(env_key)
+    if not api_key:
+        raise ValueError(f"Missing environment variable: {env_key}")
+    return OpenAI(api_key=api_key, base_url=OPENROUTER_BASE_URL)
+
+
+@lru_cache(maxsize=2)
+def _openai_client() -> OpenAI:
+    """Lazy direct-OpenAI client. Only used when OPENAI_API_KEY is set."""
+    api_key = os.getenv(OPENAI_API_KEY_ENV)
+    if not api_key:
+        raise ValueError(f"Missing environment variable: {OPENAI_API_KEY_ENV}")
+    return OpenAI(api_key=api_key)
+
+
+def _attempt_openai_call(
+    model: str,
+    api_messages: list[dict],
+    max_tokens: int,
+    temperature: float,
+    max_tpm_retries: int = 2,
+) -> str:
+    """Direct OpenAI attempt with a small TPM backoff. Raises on auth/429-TPD."""
+    client = _openai_client()
+    last_exc: Exception | None = None
+    for attempt in range(max_tpm_retries):
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=api_messages,  # type: ignore[arg-type]
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            return response.choices[0].message.content or ""
+        except Exception as e:
+            last_exc = e
+            msg = str(e)
+            if _is_auth_error(msg):
+                log.error("[AUTH-FAIL] OPENAI_API_KEY rejected (401/402)")
+                _invalid_keys.add(OPENAI_API_KEY_ENV)
+                raise
+            kind = _classify_rate_limit(msg)
+            if kind == "tpd":
+                _mark_tpd_exhausted(OPENAI_API_KEY_ENV)
+                raise
+            if kind == "tpm":
+                wait = (2**attempt) + random.uniform(0, 1)
+                log.warning(
+                    "[TPM] openai (%s): attempt %d/%d — sleeping %.1fs",
+                    model,
+                    attempt + 1,
+                    max_tpm_retries,
+                    wait,
+                )
+                _backoff_sleep(wait)
+                continue
+            raise
+    assert last_exc is not None
+    raise last_exc
+
+
+def _try_openai_for_agent(
+    agent_name: str,
+    api_messages: list[dict],
+    max_tokens: int,
+    temperature: float,
+) -> str | None:
+    """If the agent is OpenAI-routed and the key is present+valid, try it.
+    Returns None to signal 'fall through to OpenRouter/Groq'."""
+    model = _AGENT_OPENAI_MODEL.get(agent_name)
+    if not model:
+        return None
+    if not os.getenv(OPENAI_API_KEY_ENV):
+        return None
+    if OPENAI_API_KEY_ENV in _invalid_keys:
+        return None
+    if _is_tpd_exhausted(OPENAI_API_KEY_ENV):
+        return None
+    try:
+        return _attempt_openai_call(model, api_messages, max_tokens, temperature)
+    except Exception as e:
+        msg = str(e)
+        if _is_auth_error(msg):
+            return None
+        kind = _classify_rate_limit(msg)
+        if kind in ("tpm", "tpd"):
+            log.warning(
+                "[OPENAI-LIMIT] agent=%s: %s — falling through to OpenRouter",
+                agent_name,
+                kind,
+            )
+            return None
+        log.warning(
+            "[OPENAI-FAIL] agent=%s model=%s: %s — falling through to OpenRouter",
+            agent_name,
+            model,
+            str(e)[:200],
+        )
+        return None
+
+
+def _attempt_openrouter_call(
+    env_key: str,
+    model: str,
+    api_messages: list[dict],
+    max_tokens: int,
+    temperature: float,
+    max_tpm_retries: int = 2,
+) -> str:
+    """One OpenRouter (key, model) attempt with a small TPM backoff."""
+    client = _openrouter_client_for_env_key(env_key)
+    last_exc: Exception | None = None
+    for attempt in range(max_tpm_retries):
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=api_messages,  # type: ignore[arg-type]
+                max_tokens=max_tokens,
+                temperature=temperature,
+                extra_headers={
+                    "HTTP-Referer": os.getenv("OPENROUTER_REFERER", "http://localhost:3000"),
+                    "X-Title": "Orin AI",
+                },
+            )
+            return response.choices[0].message.content or ""
+        except Exception as e:
+            last_exc = e
+            msg = str(e)
+            if _is_auth_error(msg):
+                if env_key not in _invalid_keys:
+                    log.error(
+                        "[AUTH-FAIL] %s rejected as invalid OpenRouter key", env_key
+                    )
+                _invalid_keys.add(env_key)
+                raise
+            kind = _classify_rate_limit(msg)
+            if kind == "tpd":
+                _mark_tpd_exhausted(env_key)
+                raise
+            if kind == "tpm":
+                wait = (2**attempt) + random.uniform(0, 1)
+                log.warning(
+                    "[TPM] %s (openrouter %s): attempt %d/%d — sleeping %.1fs",
+                    env_key,
+                    model,
+                    attempt + 1,
+                    max_tpm_retries,
+                    wait,
+                )
+                _backoff_sleep(wait)
+                continue
+            raise
+    assert last_exc is not None
+    raise last_exc
+
+
+def _try_openrouter_for_agent(
+    agent_name: str,
+    api_messages: list[dict],
+    max_tokens: int,
+    temperature: float,
+) -> str | None:
+    """If this agent is configured for OpenRouter and the key is present + valid,
+    try primary model then fallback model. Returns None to signal 'fall through to Groq'."""
+    env_key = _AGENT_OPENROUTER_ENV_KEY.get(agent_name)
+    if not env_key or not os.getenv(env_key) or env_key in _invalid_keys:
+        return None
+    for model in (OPENROUTER_AGENT_MODEL, OPENROUTER_AGENT_MODEL_FALLBACK):
+        if not model:
+            continue
+        try:
+            result = _attempt_openrouter_call(
+                env_key, model, api_messages, max_tokens, temperature
+            )
+            if model != OPENROUTER_AGENT_MODEL:
+                log.info(
+                    "[OPENROUTER-FALLBACK-MODEL] agent=%s served by %s", agent_name, model
+                )
+            return result
+        except Exception as e:
+            msg = str(e)
+            if _is_auth_error(msg):
+                log.warning(
+                    "[OPENROUTER-AUTH] agent=%s key=%s rejected; falling through to Groq",
+                    agent_name,
+                    env_key,
+                )
+                return None
+            log.warning(
+                "[OPENROUTER-FAIL] agent=%s model=%s: %s — trying next model/tier",
+                agent_name,
+                model,
+                str(e)[:200],
+            )
+            continue
+    return None
 
 
 def _attempt_deepseek_call(
@@ -323,6 +557,33 @@ def _call_with_fallback(
     temperature: float,
 ) -> str:
     """Walk the key pool on TPD; optionally fall back to the 8B model as a last resort."""
+    # ── PRIMARY (for OpenAI-routed agents): direct OpenAI ─────────────────────
+    # Developer uses OpenAI paid (gpt-4o-mini by default). Best quality for the
+    # actual project code the judges see. Falls through on auth/limit issues.
+    if agent_name in _AGENT_OPENAI_MODEL:
+        result = _try_openai_for_agent(
+            agent_name, api_messages, max_tokens, temperature
+        )
+        if result is not None:
+            return result
+        log.info(
+            "[OPENAI-FALLTHROUGH] agent=%s falling back to OpenRouter/Groq",
+            agent_name,
+        )
+
+    # ── SECONDARY: OpenRouter for configured agents ──────────────────────────
+    # Architect / Critic / Auditor / ReadMe / (Developer if OpenAI is absent)
+    # go through OpenRouter + DeepSeek here. Groq-only agents skip this block.
+    if agent_name in _AGENT_OPENROUTER_ENV_KEY:
+        result = _try_openrouter_for_agent(
+            agent_name, api_messages, max_tokens, temperature
+        )
+        if result is not None:
+            return result
+        log.warning(
+            "[OPENROUTER-FALLTHROUGH] agent=%s falling back to Groq pool", agent_name
+        )
+
     preferred = _AGENT_PREFERRED_KEY[agent_name]
     model = AGENT_MODELS[agent_name]
 
@@ -390,8 +651,48 @@ def _call_with_fallback(
                 last_err = e
                 continue
 
-    # Last-resort provider fallback: DeepSeek. Much larger daily budgets than Groq free tier,
-    # so for the demo this keeps the pipeline alive when every Groq bucket is empty/broken.
+    # Last-resort provider fallback #1: OpenRouter. Walk every OpenRouter key
+    # we know about — developer/architect are on separate accounts, and the
+    # shared "fallback" key is a fresh account that still has credit even if
+    # everything else is dry. De-duplicate so we don't hit the same account
+    # twice (critic/auditor/readme intentionally point at the developer key).
+    _seen_values: set[str] = set()
+    _openrouter_fallback_order: list[str] = []
+    for env_key in (
+        "OPENROUTER_DEVELOPER_KEY",
+        "OPENROUTER_ARCHITECT_KEY",
+        "OPENROUTER_CRITIC_KEY",
+        "OPENROUTER_AUDITOR_KEY",
+        "OPENROUTER_README_KEY",
+        "OPENROUTER_FALLBACK_KEY",
+    ):
+        val = os.getenv(env_key)
+        if not val or val in _seen_values:
+            continue
+        _seen_values.add(val)
+        _openrouter_fallback_order.append(env_key)
+    for env_key in _openrouter_fallback_order:
+        if not os.getenv(env_key) or env_key in _invalid_keys:
+            continue
+        for model in (OPENROUTER_AGENT_MODEL, OPENROUTER_AGENT_MODEL_FALLBACK):
+            if not model:
+                continue
+            try:
+                log.warning(
+                    "[PROVIDER-FALLBACK] agent=%s: all Groq capacity unavailable → OpenRouter %s via %s",
+                    agent_name,
+                    model,
+                    env_key,
+                )
+                return _attempt_openrouter_call(
+                    env_key, model, api_messages, max_tokens, temperature
+                )
+            except Exception as e:
+                last_err = e
+                continue
+
+    # Last-resort provider fallback #2: DeepSeek direct. Only used if the user still
+    # has a DeepSeek direct-API account with credit (optional).
     deepseek_keys = [
         k for k in _DEEPSEEK_ENV_KEYS
         if os.getenv(k) and not _is_tpd_exhausted(k) and k not in _invalid_keys
@@ -466,15 +767,52 @@ def validate_all_keys() -> dict:
         "E2B_API_KEY",
         "LOGFIRE_TOKEN",
     ]
-    optional = ["DEEPSEEK_API_KEY_1", "DEEPSEEK_API_KEY_2"]
+    optional_deepseek = ["DEEPSEEK_API_KEY_1", "DEEPSEEK_API_KEY_2"]
+    optional_openrouter = [
+        "OPENROUTER_DEVELOPER_KEY",
+        "OPENROUTER_ARCHITECT_KEY",
+        "OPENROUTER_CRITIC_KEY",
+        "OPENROUTER_AUDITOR_KEY",
+        "OPENROUTER_README_KEY",
+        "OPENROUTER_FALLBACK_KEY",
+    ]
+    optional_openai = ["OPENAI_API_KEY"]
+
     results = {key: ("ok" if os.getenv(key) else "MISSING") for key in required}
-    for key in optional:
+    for key in optional_deepseek + optional_openrouter + optional_openai:
         results[key] = "ok" if os.getenv(key) else "OPTIONAL-MISSING"
+
     missing = [k for k, v in results.items() if v == "MISSING"]
     if missing:
         print(f"[WARNING] Missing env vars: {missing}")
     else:
         print("[OK] All required environment variables present")
-    deepseek_count = sum(1 for k in optional if results[k] == "ok")
-    print(f"[INFO] DeepSeek fallback keys available: {deepseek_count}/2")
+
+    print(
+        f"[INFO] DeepSeek direct keys: {sum(1 for k in optional_deepseek if results[k] == 'ok')}/{len(optional_deepseek)}"
+    )
+
+    # De-dupe OpenRouter keys by VALUE so we report the real number of distinct
+    # accounts, not just the number of env slots that are set.
+    _seen_vals: set[str] = set()
+    _distinct = 0
+    for k in optional_openrouter:
+        v = os.getenv(k)
+        if v and v not in _seen_vals:
+            _seen_vals.add(v)
+            _distinct += 1
+    print(
+        f"[INFO] OpenRouter accounts configured: {_distinct} "
+        f"(across {sum(1 for k in optional_openrouter if results[k] == 'ok')} slots)"
+    )
+
+    if results["OPENAI_API_KEY"] == "ok":
+        print(
+            f"[OK] OpenAI direct API configured (Developer -> "
+            f"{os.getenv('OPENAI_DEVELOPER_MODEL', 'gpt-4o-mini')})"
+        )
+    else:
+        print(
+            "[INFO] OPENAI_API_KEY not set - Developer will use OpenRouter/DeepSeek instead."
+        )
     return results
