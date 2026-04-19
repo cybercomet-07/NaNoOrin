@@ -99,9 +99,18 @@ AGENT_MODELS = {
 
 
 def _backoff_sleep(seconds: float) -> None:
-    """Caps wall time so sync nodes do not block the worker for tens of seconds (see ORIN_GROQ_BACKOFF_CAP_SEC)."""
+    """Rate-limit backoff. If called on the asyncio loop thread, sleep is capped short to avoid freezing I/O."""
     cap = float(os.getenv("ORIN_GROQ_BACKOFF_CAP_SEC", "8"))
-    time.sleep(min(seconds, cap))
+    secs = min(seconds, cap)
+    try:
+        import asyncio
+
+        asyncio.get_running_loop()
+    except RuntimeError:
+        time.sleep(secs)
+        return
+    loop_cap = float(os.getenv("ORIN_GROQ_LOOP_THREAD_SLEEP_CAP_SEC", "0.25"))
+    time.sleep(min(secs, loop_cap))
 
 
 def _with_retry(func, max_retries: int = 4):

@@ -7,6 +7,8 @@ export interface AgentEvent {
   task_id: string
   iteration: number
   payload: Record<string, unknown>
+  /** Pipeline status from FastAPI `make_event` (top-level); not inside `payload`. */
+  status?: string
   timestamp: string
 }
 
@@ -70,8 +72,12 @@ export function usePipelineStream(runId: string | null) {
         }
         
         if (data.event_type === "status_update") {
-          const newStatus = data.payload?.status as string
-          setStatus(newStatus)
+          const newStatus =
+            (typeof data.status === "string" && data.status
+              ? data.status
+              : (data.payload?.status as string | undefined) ??
+                (data.payload?.final_status as string | undefined)) ?? ""
+          if (newStatus) setStatus(newStatus)
           
           // Fetch artifacts when finalized
           if (newStatus === "FINALIZED") {

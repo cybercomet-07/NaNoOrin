@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agents.auditor import regex_scan
+from agents.auditor import regex_scan, route_after_audit
 from agents.critic import route_after_critic
 from state import (
     TestRun,
@@ -22,6 +22,7 @@ def test_agent_state_initialization() -> None:
     assert state["iteration_count"] == 0
     assert state["mode"] == "normal"
     assert state["test_results"] == []
+    assert state["audit_retry_count"] == 0
 
 
 def test_panic_mode_activates_at_iteration_3() -> None:
@@ -76,3 +77,17 @@ def test_auditor_catches_hardcoded_key() -> None:
     violations = regex_scan(code_files)
     assert len(violations) > 0
     assert any(v["type"] == "hardcoded_secret" for v in violations)
+
+
+def test_route_after_audit_max_loops() -> None:
+    state = get_initial_state("test")
+    state["audit_passed"] = False
+    state["audit_retry_count"] = 99
+    assert route_after_audit(state) == "end_failed"
+
+
+def test_route_after_audit_to_developer() -> None:
+    state = get_initial_state("test")
+    state["audit_passed"] = False
+    state["audit_retry_count"] = 0
+    assert route_after_audit(state) == "developer"

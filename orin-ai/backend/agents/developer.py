@@ -126,7 +126,7 @@ def execute_and_test(code_files: dict[str, str], iteration: int) -> TestRun:
     )
 
 
-def developer_node(state: AgentState) -> AgentState:
+def developer_node(state: AgentState) -> dict:
     next_iter = state["iteration_count"] + 1
 
     correction_directive: str | None = None
@@ -165,7 +165,6 @@ def developer_node(state: AgentState) -> AgentState:
             logfire.error("developer_node_soft_fail", error=str(e)[:500])
             user_message = f"[developer error] {str(e)[:1500]}"
             err_tail = str(e)[:800]
-            state["error_log"].append(f"developer_node: {type(e).__name__}: {err_tail}")
             test_run = TestRun(
                 iteration=next_iter,
                 stdout="",
@@ -173,26 +172,29 @@ def developer_node(state: AgentState) -> AgentState:
                 exit_code=1,
                 passed=False,
             )
-            state["test_results"] = [*state["test_results"], test_run]
-            state["iteration_count"] = next_iter
-            if state["iteration_count"] >= 3:
-                state["mode"] = "panic"
-            state["messages"] = (state.get("messages", []) + [
-                {"role": "user", "content": user_message[:3000]},
-                {"role": "assistant", "content": f"[code failed] {test_run.stderr[:400]}"},
-            ])[-12:]
-            return state
+            new_iter = next_iter
+            mode = "panic" if new_iter >= 3 else state["mode"]
+            return {
+                "error_log": [f"developer_node: {type(e).__name__}: {err_tail}"],
+                "test_results": [*state["test_results"], test_run],
+                "iteration_count": new_iter,
+                "mode": mode,
+                "messages": (state.get("messages", []) + [
+                    {"role": "user", "content": user_message[:3000]},
+                    {"role": "assistant", "content": f"[code failed] {test_run.stderr[:400]}"},
+                ])[-12:],
+            }
 
-        state["test_results"] = [*state["test_results"], test_run]
-        state["code_files"] = code_files
-        state["iteration_count"] = next_iter
-        if state["iteration_count"] >= 3:
-            state["mode"] = "panic"
-
-        # Keep conversation history so retry calls see prior error context
+        new_iter = next_iter
+        mode = "panic" if new_iter >= 3 else state["mode"]
         test_summary = f"passed={test_run.passed} exit={test_run.exit_code} stderr={test_run.stderr[:300]}"
-        state["messages"] = (state.get("messages", []) + [
-            {"role": "user",      "content": user_message[:3000]},
-            {"role": "assistant", "content": f"[code generated] {test_summary}"},
-        ])[-12:]
-    return state
+        return {
+            "test_results": [*state["test_results"], test_run],
+            "code_files": code_files,
+            "iteration_count": new_iter,
+            "mode": mode,
+            "messages": (state.get("messages", []) + [
+                {"role": "user", "content": user_message[:3000]},
+                {"role": "assistant", "content": f"[code generated] {test_summary}"},
+            ])[-12:],
+        }

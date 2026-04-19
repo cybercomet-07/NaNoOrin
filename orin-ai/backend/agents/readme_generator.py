@@ -71,14 +71,15 @@ Generate a complete, professional README.md for this project."""
     ).strip()
 
 
-def readme_node(state: AgentState) -> AgentState:
+def readme_node(state: AgentState) -> dict:
     """LangGraph node — generates README and merges into code_files."""
     with logfire.span("readme_generator"):
+        err_log: list[str] = []
         try:
             readme_content = generate_readme(state)
         except Exception as e:
             logfire.error("readme_generation_failed", error=str(e))
-            state["error_log"].append(f"readme_generator: {e}")
+            err_log.append(f"readme_generator: {e}")
             readme_content = (
                 f"# Generated project\n\n"
                 f"README generation failed ({e!s}). See code files for the built app.\n\n"
@@ -87,6 +88,8 @@ def readme_node(state: AgentState) -> AgentState:
 
         files = dict(state.get("code_files") or {})
         files["README.md"] = readme_content
-        state["code_files"] = files
         logfire.info("readme_generated", length=len(readme_content))
-    return state
+        out: dict = {"code_files": files}
+        if err_log:
+            out["error_log"] = err_log
+        return out

@@ -37,10 +37,10 @@ def check_for_security_flags(state: AgentState) -> bool:
     return False
 
 
-def _mark_current_task_passed(state: AgentState) -> None:
+def _mark_current_task_passed(state: AgentState) -> list[Task]:
     tid = state.get("current_task_id")
     if not tid:
-        return
+        return list(state["task_graph"])
     updated: list[Task] = []
     for t in state["task_graph"]:
         if t.task_id == tid:
@@ -56,10 +56,10 @@ def _mark_current_task_passed(state: AgentState) -> None:
             )
         else:
             updated.append(t)
-    state["task_graph"] = updated
+    return updated
 
 
-def critic_node(state: AgentState) -> AgentState:
+def critic_node(state: AgentState) -> dict:
     passed, reason = evaluate_test_result(state)
     with logfire.span(
         "critic_node",
@@ -68,10 +68,8 @@ def critic_node(state: AgentState) -> AgentState:
         reason=reason[:100],
     ):
         if passed:
-            _mark_current_task_passed(state)
-        else:
-            state["error_log"].append(f"critic: {reason}")
-    return state
+            return {"task_graph": _mark_current_task_passed(state)}
+        return {"error_log": [f"critic: {reason}"]}
 
 
 def route_after_critic(state: AgentState) -> str:

@@ -79,6 +79,8 @@ class AgentState(TypedDict):
     # Phase 4 outputs
     audit_report: Optional[dict]
     audit_passed: bool
+    # Loops: developer → auditor when audit fails; capped to avoid infinite remediation.
+    audit_retry_count: int
 
     # Pipeline control
     status: Literal["RUNNING", "FAILED", "PANIC", "FINALIZED"]
@@ -102,6 +104,7 @@ def get_initial_state(goal: str) -> AgentState:
         test_results=[],
         audit_report=None,
         audit_passed=False,
+        audit_retry_count=0,
         status="RUNNING",
         error_log=[],
         messages=[],

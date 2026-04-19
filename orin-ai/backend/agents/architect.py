@@ -71,8 +71,9 @@ def generate_architecture(state: AgentState) -> tuple[Architecture, str]:
     return arch, user
 
 
-def architect_node(state: AgentState) -> AgentState:
+def architect_node(state: AgentState) -> dict:
     with logfire.span("architect_agent", goal=state["goal"][:50]):
+        err_log: list[str] = []
         try:
             arch, user_message = generate_architecture(state)
         except Exception as e:
@@ -82,11 +83,15 @@ def architect_node(state: AgentState) -> AgentState:
                 f"[fallback] Architect LLM output was invalid: {str(e)[:200]}\n"
                 f"Using default blueprint for goal: {state['goal'][:500]}"
             )
-            state["error_log"].append(f"architect: {type(e).__name__}: {str(e)[:400]}")
-        state["architecture"] = arch
+            err_log.append(f"architect: {type(e).__name__}: {str(e)[:400]}")
         arch_summary = f"tech_rationale: {arch.tech_rationale[:500]}"
-        state["messages"] = (state.get("messages", []) + [
-            {"role": "user",      "content": user_message[:3000]},
-            {"role": "assistant", "content": arch_summary},
-        ])[-12:]
-    return state
+        out: dict = {
+            "architecture": arch,
+            "messages": (state.get("messages", []) + [
+                {"role": "user", "content": user_message[:3000]},
+                {"role": "assistant", "content": arch_summary},
+            ])[-12:],
+        }
+        if err_log:
+            out["error_log"] = err_log
+        return out

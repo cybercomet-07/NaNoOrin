@@ -37,49 +37,49 @@ def fan_out_research_and_persona(state: AgentState):
     ]
 
 
-def join_node(state: AgentState) -> AgentState:
+def join_node(state: AgentState) -> dict:
     """
     Phase 1 join: LangGraph fan-in waits for Researcher AND Persona.
     Ensures Architect sees research_output and personas; fills defaults if missing.
+    Returns a partial state update (no in-place mutation — reducers merge `error_log`).
     """
     issues: list[str] = []
 
-    if not state.get("research_output"):
+    research_output = state.get("research_output")
+    if not research_output:
         issues.append("WARNING: research_output missing — Architect proceeding without market data")
-        state["research_output"] = DEFAULT_RESEARCH_JSON
+        research_output = DEFAULT_RESEARCH_JSON
 
-    if not state.get("personas"):
+    personas = state.get("personas")
+    if not personas:
         issues.append("WARNING: personas missing — Architect proceeding without user personas")
-        state["personas"] = DEFAULT_PERSONAS_JSON
+        personas = DEFAULT_PERSONAS_JSON
 
+    out: dict = {"research_output": research_output, "personas": personas}
     if issues:
-        state["error_log"].extend(issues)
+        out["error_log"] = issues
         logfire.warning("join_node_incomplete", issues=issues)
 
     logfire.info(
         "join_node_complete",
-        has_research=bool(state.get("research_output")),
-        has_personas=bool(state.get("personas")),
+        has_research=bool(research_output),
+        has_personas=bool(personas),
     )
-    # Single fan-in point: merge parallel phase into `messages` (avoids LangGraph parallel
-    # merge conflict when Researcher and Persona both wrote to `messages`).
-    ro = (state.get("research_output") or "")[:3000]
-    pe = (state.get("personas") or "")[:3000]
-    state["messages"] = (state.get("messages", []) + [
+    ro = (research_output or "")[:3000]
+    pe = (personas or "")[:3000]
+    out["messages"] = (state.get("messages", []) + [
         {"role": "user", "content": "[join] Research + Persona outputs merged for downstream agents."},
         {"role": "assistant", "content": f"[research excerpt]\n{ro}\n\n[personas excerpt]\n{pe}"},
     ])[-12:]
-    return state
+    return out
 
 
-def end_success_node(state: AgentState) -> AgentState:
-    state["status"] = "FINALIZED"
-    return state
+def end_success_node(state: AgentState) -> dict:
+    return {"status": "FINALIZED"}
 
 
-def end_failed_node(state: AgentState) -> AgentState:
-    state["status"] = "FAILED"
-    return state
+def end_failed_node(state: AgentState) -> dict:
+    return {"status": "FAILED"}
 
 
 builder = StateGraph(AgentState)
@@ -120,6 +120,7 @@ builder.add_conditional_edges(
     {
         "readme_generator": "readme_generator",
         "developer": "developer",
+        "end_failed": "end_failed",
     },
 )
 

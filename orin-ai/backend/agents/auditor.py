@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Any
 
@@ -12,10 +13,38 @@ from llm_clients import call_agent_llm
 from llm_json import parse_json_object
 from state import AgentState
 
-_SECRET_RE = re.compile(r"[A-Za-z0-9]{32,}")
+# Narrower than "32+ alnum" (which flags UUIDs without dashes, long identifiers, etc.):
+# API-key-shaped tokens, hex digests, base64 blobs, AWS-style keys.
+_SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(?i)\b(?:sk|pk)_(?:live|test|prod)_[a-z0-9]{20,}\b"),
+    re.compile(r"(?i)\bsk-[a-z0-9]{20,}\b"),
+    re.compile(r"\b[a-f0-9]{64}\b"),
+    re.compile(r"\b[a-f0-9]{40}\b"),
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    re.compile(r"\b[A-Za-z0-9+/]{43,}={0,2}\b"),
+)
 _SQL_FSTRING = re.compile(r'f["\'][\s\S]*?SELECT', re.IGNORECASE)
 _EVAL_RE = re.compile(r"\b(eval|exec)\s*\(")
 _ROUTE_RE = re.compile(r"@(?:app|router)\.(?:get|post|put|delete|patch)\s*\(")
+
+_MAX_AUDIT_LOOPS = max(1, int(os.getenv("ORIN_MAX_AUDIT_LOOPS", "4")))
+
+
+def _line_has_secret_candidate(line: str) -> list[str]:
+    """Return substrings that look like embedded secrets (conservative to reduce false positives)."""
+    hits: list[str] = []
+    for pat in _SECRET_PATTERNS:
+        for m in pat.findall(line):
+            s = m if isinstance(m, str) else m[0]
+            if len(s) < 32:
+                continue
+            if s.isdigit():
+                continue
+            # Ignore low-entropy runs (e.g. repeated chars)
+            if len(set(s)) < 6:
+                continue
+            hits.append(s)
+    return hits
 
 
 def regex_scan(code_files: dict[str, str]) -> list[dict[str, Any]]:
@@ -23,9 +52,7 @@ def regex_scan(code_files: dict[str, str]) -> list[dict[str, Any]]:
     for fname, content in code_files.items():
         lines = content.splitlines()
         for i, line in enumerate(lines, start=1):
-            for m in _SECRET_RE.findall(line):
-                if m.isdigit() or len(m) < 32:
-                    continue
+            for m in _line_has_secret_candidate(line):
                 violations.append(
                     {
                         "file": fname,
@@ -84,16 +111,19 @@ def llm_security_review(
         f"Code:\n{bundle[:100000]}"
     )
     text = call_agent_llm(
-        "auditor", system, user,
+        "auditor",
+        system,
+        user,
         messages_history=messages_history,
         max_tokens=4096,
     )
     return parse_json_object(text or ""), user
 
 
-def auditor_node(state: AgentState) -> AgentState:
+def auditor_node(state: AgentState) -> dict:
     code_files = state.get("code_files") or {}
     violations = regex_scan(code_files)
+    prior_retries = int(state.get("audit_retry_count", 0))
 
     with logfire.span(
         "auditor_agent",
@@ -102,38 +132,53 @@ def auditor_node(state: AgentState) -> AgentState:
         files_scanned=len(code_files),
     ):
         if not violations:
-            state["audit_report"] = {"regex_violations": [], "llm_review": None}
-            state["audit_passed"] = True
-            return state
+            return {
+                "audit_report": {"regex_violations": [], "llm_review": None},
+                "audit_passed": True,
+                "audit_retry_count": 0,
+            }
 
         review, user_message = llm_security_review(
-            code_files, violations,
+            code_files,
+            violations,
             messages_history=state.get("messages", []),
         )
-        state["audit_report"] = {"regex_violations": violations, "llm_review": review}
+        audit_report = {"regex_violations": violations, "llm_review": review}
         clean = bool(review.get("clean"))
-        state["audit_passed"] = clean
 
-        # Update message history
         audit_result = json.dumps({"clean": clean, "violations": review.get("violations", [])})
-        state["messages"] = (state.get("messages", []) + [
-            {"role": "user",      "content": user_message[:2000]},
+        messages = (state.get("messages", []) + [
+            {"role": "user", "content": user_message[:2000]},
             {"role": "assistant", "content": audit_result[:2000]},
         ])[-12:]
 
+        err_log: list[str] = []
         if not clean:
-            state["error_log"].append("auditor: security review failed; remediation required")
-            state["messages"].append({
-                "role": "system",
-                "content": json.dumps(
-                    {"security_remediation": review.get("violations", [])}
-                )[:12000],
-            })
-        logfire.info("auditor_result", audit_passed=state["audit_passed"])
-    return state
+            err_log.append("auditor: security review failed; remediation required")
+            messages = messages + [
+                {
+                    "role": "system",
+                    "content": json.dumps({"security_remediation": review.get("violations", [])})[:12000],
+                }
+            ]
+
+        new_retries = 0 if clean else prior_retries + 1
+
+        logfire.info("auditor_result", audit_passed=clean)
+        out: dict = {
+            "audit_report": audit_report,
+            "audit_passed": clean,
+            "audit_retry_count": new_retries,
+            "messages": messages,
+        }
+        if err_log:
+            out["error_log"] = err_log
+        return out
 
 
 def route_after_audit(state: AgentState) -> str:
     if state.get("audit_passed"):
         return "readme_generator"
+    if int(state.get("audit_retry_count", 0)) >= _MAX_AUDIT_LOOPS:
+        return "end_failed"
     return "developer"

@@ -127,20 +127,28 @@ def generate_correction_directive(state: AgentState) -> str:
     return (out or "").strip()
 
 
-def supervisor_node(state: AgentState) -> AgentState:
+def supervisor_node(state: AgentState) -> dict:
     with logfire.span("supervisor_agent", goal_preview=state["goal"][:100]):
         try:
             tasks, user_message = generate_task_graph(state)
             task_json = json.dumps([t.__dict__ for t in tasks], default=str)
-            state["messages"] = (state.get("messages", []) + [
-                {"role": "user",      "content": user_message[:4000]},
+            messages = (state.get("messages", []) + [
+                {"role": "user", "content": user_message[:4000]},
                 {"role": "assistant", "content": task_json[:4000]},
             ])[-12:]
         except Exception as e:
             logfire.warning("supervisor_task_graph_failed", error=str(e))
-            state["error_log"].append(f"supervisor_generate_task_graph: {e}")
             tasks = _fallback_task_graph()
-        state["task_graph"] = tasks
-        state["current_task_id"] = tasks[0].task_id if tasks else ""
+            messages = state.get("messages", [])
+            return {
+                "error_log": [f"supervisor_generate_task_graph: {e}"],
+                "task_graph": tasks,
+                "current_task_id": tasks[0].task_id if tasks else "",
+                "messages": messages,
+            }
         logfire.info("supervisor_result", task_count=len(tasks))
-    return state
+        return {
+            "task_graph": tasks,
+            "current_task_id": tasks[0].task_id if tasks else "",
+            "messages": messages,
+        }
